@@ -44,6 +44,19 @@ class Subtitles(pysubs2.SSAFile):
             res.pop(0)
         return res
 
+    def synchronizePiecewise(self, a, offsets):
+        """Synchronize with the same speed `a` but own offset (seconds) for
+        every subtitle line, in the order of lines (sorted by start time)."""
+        res = copy.deepcopy(self)
+        for event, offset in zip(res.events, offsets):
+            event.start = int(round(a * event.start + offset * 1000.0))
+            event.end = int(round(a * event.end + offset * 1000.0))
+        res.sort()
+        while len(res) and res[0].end <= 0:
+            logger.debug('removing subtitle line with negative time: %r', res[0])
+            res.pop(0)
+        return res
+
     def save(self, path, encoding=u'utf-8', fmt=None, fps=None, overwrite=False):
         if not overwrite and os.path.exists(path):
             logger.info('file "%s" exists, generating new path', path)
@@ -124,6 +137,12 @@ class SubtitlesCollector(object):
         logger.info('subtitles synchronized with %s', str(formula))
         with self.subtitlesLock:
             return self.subtitles.synchronize(formula)
+
+    def getSynchronizedSubtitlesPiecewise(self, a, offsets):
+        logger.info('subtitles synchronized piecewise, speed %.6f, %i pieces',
+                a, len(set(offsets)))
+        with self.subtitlesLock:
+            return self.subtitles.synchronizePiecewise(a, offsets)
 
 
 def parseLine(text):

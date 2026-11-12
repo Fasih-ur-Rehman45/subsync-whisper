@@ -94,6 +94,7 @@ class SyncController(object):
         """
         self._onJobStart = kw.get('onJobStart', getattr(listener, 'onJobStart', lambda task: None))
         self._onJobInit = kw.get('onJobInit', getattr(listener, 'onJobInit', lambda task: None))
+        self._onJobInitProgress = kw.get('onJobInitProgress', getattr(listener, 'onJobInitProgress', lambda task, msg: None))
         self._onJobEnd = kw.get('onJobEnd', getattr(listener, 'onJobEnd', lambda task, status, result: None))
         self._onJobUpdate = kw.get('onJobUpdate', getattr(listener, 'onJobUpdate', lambda task, status: None))
         self._onFinish = kw.get('onFinish', getattr(listener, 'onFinish', lambda terminated: None))
@@ -334,6 +335,7 @@ class SyncController(object):
             self._sync = sync = Synchronizer(task.sub, task.ref)
             sync.onUpdate = self._semaphore.release
             sync.onError = lambda src, err: self._onError(task, src, err)
+            sync.onInitProgress = lambda msg: self._onJobInitProgress(task, msg)
 
             sync.init(self._options, runCb=lambda: not self._terminated)
             if not self._terminated:
