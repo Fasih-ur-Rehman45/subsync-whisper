@@ -57,6 +57,10 @@ class SyncWin(subsync.gui.layout.syncwin.SyncWin):
         self.sync.terminate()
 
     @gui_thread
+    def onJobInitProgress(self, task, msg):
+        self.m_textStatus.SetLabel(msg)
+
+    @gui_thread
     def onJobInit(self, task):
         self.m_textStatus.SetLabel(_('Synchronizing...'))
 

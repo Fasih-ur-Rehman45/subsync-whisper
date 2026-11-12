@@ -94,6 +94,9 @@ def syncErrorToString(source, err):
     elif source == 'ref':
         if err.fields.get('module', '').startswith('SubtitleDec.decode'):
             return _('Some reference subtitles can\'t be decoded (invalid encoding?)')
+        elif isinstance(err, error.Error):
+            # SubSync's own errors (e.g. from audio transcription) explain themselves
+            return str(err.message)
         else:
             return _('Error during reference read')
     elif source == 'out':
