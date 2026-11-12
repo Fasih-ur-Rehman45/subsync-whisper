@@ -1,16 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_all
+
+# faster-whisper (audio transcription for languages without a speech model)
+# and its native parts: models runtime, voice detection model, audio decoder
+whisper_datas, whisper_binaries, whisper_hiddenimports = [], [], []
+for package in ('faster_whisper', 'ctranslate2', 'onnxruntime', 'av', 'tokenizers'):
+    datas, binaries, hiddenimports = collect_all(package)
+    whisper_datas += datas
+    whisper_binaries += binaries
+    whisper_hiddenimports += hiddenimports
+
 
 main_a = Analysis(['bin/subsync'],
         pathex=['.'],
-        binaries=[],
+        binaries=whisper_binaries,
         datas=[
             ('LICENSE', '.'),
             ('subsync/key.pub', '.'),
             ('subsync/img', 'img'),
             ('subsync/locale', 'locale'),
-            ],
-        hiddenimports=[],
+            ] + whisper_datas,
+        hiddenimports=whisper_hiddenimports,
         hookspath=[],
         runtime_hooks=[],
         excludes=[],
