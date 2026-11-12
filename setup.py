@@ -374,6 +374,7 @@ setup(
             ],
         extras_require = {
             'GUI': [ 'wxPython>=4.0' ],
+            'whisper': [ 'faster-whisper>=1.0' ],
             },
         scripts = ['bin/subsync'],
         cmdclass = {
