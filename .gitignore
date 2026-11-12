@@ -35,3 +35,9 @@ CppCheckResults.xml
 .eggs
 *.egg-info
 *.snap
+
+# local runtimes (Python 3.6 with the engine, Python 3.12 with faster-whisper)
+/.py36
+/.whisper
+# test material: subtitles and transcripts of local movies, not for publishing
+/test-data
