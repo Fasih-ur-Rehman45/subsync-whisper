@@ -71,6 +71,11 @@ jobs:
         run: |
           python setup.py build_py
           python setup.py build_ext --inplace
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # Python 3.8+ does not look for extension dependencies in PATH,
+          # native libraries must be next to the engine
+          Copy-Item deps\ffmpeg\bin\*.dll, deps\sphinxbase\bin\Release\x64\sphinxbase.dll, deps\pocketsphinx\bin\Release\x64\pocketsphinx.dll -Destination .
+          Get-ChildItem gizmo*.pyd, *.dll | Select-Object Name, Length
 
       - name: Smoke test
         run: |
