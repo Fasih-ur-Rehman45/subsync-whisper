@@ -1,0 +1,97 @@
+name: Windows build
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    env:
+      # last pocketsphinx revision before the 5.0 rewrite: the engine uses its
+      # old API (and sphinxbase), and it still ships Visual Studio solutions
+      POCKETSPHINX_REF: 588ab6371a1e1c94c10d4ad772b0c4732e1905e6
+      # FFmpeg 5.1: the engine uses the old channel layout API, removed in 7.0
+      FFMPEG_URL: https://github.com/GyanD/codexffmpeg/releases/download/5.1.2/ffmpeg-5.1.2-full_build-shared.zip
+      FFMPEG_NAME: ffmpeg-5.1.2-full_build-shared
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Get sphinxbase and pocketsphinx sources
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/cmusphinx/sphinxbase.git deps/sphinxbase
+          git clone https://github.com/cmusphinx/pocketsphinx.git deps/pocketsphinx
+          git -C deps/pocketsphinx checkout --quiet "$POCKETSPHINX_REF"
+
+      - name: Build sphinxbase and pocketsphinx
+        run: |
+          $props = '/p:Configuration=Release', '/p:Platform=x64', '/p:PlatformToolset=v143', '/p:WindowsTargetPlatformVersion=10.0'
+          msbuild deps\sphinxbase\sphinxbase.sln /m /t:sphinxbase @props
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          msbuild deps\pocketsphinx\pocketsphinx.sln /m /t:pocketsphinx @props
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem -Recurse deps\sphinxbase\bin, deps\pocketsphinx\bin -Include *.dll, *.lib | Select-Object -ExpandProperty FullName
+
+      - name: Get FFmpeg
+        shell: bash
+        run: |
+          curl -sSL -o ffmpeg.zip "$FFMPEG_URL"
+          7z x -y -odeps ffmpeg.zip > /dev/null
+          mv "deps/$FFMPEG_NAME" deps/ffmpeg
+          ls deps/ffmpeg deps/ffmpeg/lib deps/ffmpeg/bin
+
+      - name: Add native libraries to PATH
+        shell: bash
+        run: |
+          for d in deps/ffmpeg/bin deps/sphinxbase/bin/Release/x64 deps/pocketsphinx/bin/Release/x64; do
+            cygpath -w "$GITHUB_WORKSPACE/$d" >> "$GITHUB_PATH"
+          done
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt "pysubs2==0.2.4" wxPython "faster-whisper==1.2.1" pyinstaller
+
+      - name: Build engine
+        env:
+          FFMPEG_DIR: ${{ github.workspace }}\deps\ffmpeg
+          SPHINXBASE_DIR: ${{ github.workspace }}\deps\sphinxbase
+          POCKETSPHINX_DIR: ${{ github.workspace }}\deps\pocketsphinx
+        run: |
+          python setup.py build_py
+          python setup.py build_ext --inplace
+
+      - name: Smoke test
+        run: |
+          python -c "import gizmo; print('engine:', gizmo.__file__)"
+          python -c "import sys; sys.path.insert(0, 'subsync/synchro'); import transcribe; print('whisper in process:', transcribe._hasModule())"
+          python -c "import subsync.synchro.synchronizer, subsync.gui.mainwin; print('subsync modules: ok')"
+
+      - name: Package
+        run: |
+          pyinstaller --noconfirm windows.spec
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Copy-Item LICENSE dist\subsync\
+          Get-ChildItem dist\subsync | Select-Object -First 40 Name, Length
+
+      - name: Test package
+        run: |
+          dist\subsync\subsync-cmd.exe --version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subsync-windows-x64
+          path: dist/subsync
+          if-no-files-found: error
