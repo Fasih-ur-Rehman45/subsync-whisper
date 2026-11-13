@@ -6,7 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ## [Unreleased]
 
+## [0.19] - 2026-11-13
+
 ### Added
+- **The audio language is detected automatically.** Most video files don't say which language their audio is in, so it no longer has to be selected by hand: when it's not set, SubSync listens to a few minutes of speech and selects it, in about 10 seconds. This works in the app, in batch mode and on the command line.
 - **Portable `.exe`**, like the original SubSync's: run it, choose where to unpack, and it creates a `subsync` folder with the app. The zip is still available.
 
 ### Changed
@@ -38,6 +41,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 Last release of the original [SubSync](https://github.com/sc0ty/subsync/releases/tag/0.17) by Michał Szymaniak.
 
-[Unreleased]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/compare/0.18...HEAD
+[Unreleased]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/compare/0.19...HEAD
+[0.19]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/tag/0.19
 [0.18]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/tag/0.18
 [0.17]: https://github.com/sc0ty/subsync/releases/tag/0.17
