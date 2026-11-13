@@ -87,8 +87,13 @@ Speech recognition runs on your computer. Your videos and subtitles are never up
 
 ## Troubleshooting
 
-- **To see what SubSync is doing,** run `subsync-debug.exe` instead of `subsync.exe`. It opens the same window plus a console with the full log. Include that log if you report a problem.
-- **For the command line,** add `--logfile log.txt` to save the log.
+- **To save a log of what SubSync does:**
+  1. Open the SubSync folder, click the address bar, type `cmd` and press Enter.
+  2. Run `subsync.exe --loglevel=INFO --logfile=log.txt`.
+  3. Repeat the sync. The log is written to `log.txt`.
+
+  On the command line, add the same two options to `subsync-cmd.exe`.
+- **To report a problem,** use the [bug report form](https://github.com/Fasih-ur-Rehman45/subsync-whisper/issues/new?template=bug_report.yml) and include the log.
 
 ## Command line
 
