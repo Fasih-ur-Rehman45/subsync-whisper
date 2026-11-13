@@ -2,7 +2,8 @@ from subsync.synchro import SyncController
 from subsync.assets import assetManager
 from subsync.settings import settings
 from subsync import validator, utils, error
-from subsync.synchro import transcribe
+from subsync.synchro import transcribe, langdetect
+from subsync.data import languages
 import time
 import threading
 
@@ -59,6 +60,32 @@ class AssetsVerifier(object):
             return False
 
         return True
+
+    def detectLanguages(self, tasks):
+        tasks = [ task for task in tasks if langdetect.needsDetection(task) ]
+        if not tasks:
+            return
+        if transcribe.isModelInstalled() is False and not self.downloadSpeechModel():
+            return
+
+        for task in tasks:
+            pr.println(1, '[+] detecting audio language of {}'.format(task.ref.path))
+            try:
+                res = langdetect.detect(task)
+            except transcribe.Terminated:
+                raise
+            except Exception as err:
+                pr.printException(1, err, "couldn't detect audio language")
+                continue
+            if res:
+                pr.println(1, '[+] audio language: {} ({:.0f}%)'.format(
+                    languages.getName(res[0]), 100 * res[1]))
+            else:
+                pr.println(1, "[-] couldn't detect audio language, select it with --ref-lang")
+
+    def downloadSpeechModel(self):
+        # needs internet, not allowed in offline mode
+        return False
 
     def printMissingAssets(self, assets):
         pr.println(0, '[!] there is no assets needed to perform synchronization')
@@ -164,6 +191,7 @@ class App(object):
         sync = None
 
         try:
+            self.assetsDownloader.detectLanguages(tasks)
             validator.validateTasks(tasks, outputRequired=True)
         except Exception as err:
             pr.printException(0, err)
