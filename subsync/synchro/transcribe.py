@@ -371,7 +371,134 @@ def loadModel(model=None):
     device = os.environ.get('SUBSYNC_WHISPER_DEVICE') or 'cpu'
     compute = os.environ.get('SUBSYNC_WHISPER_COMPUTE') or 'int8'
     logger.info('loading whisper model %s (%s, %s)', model, device, compute)
-    return WhisperModel(model, device=device, compute_type=compute)
+    try:
+        return WhisperModel(model, device=device, compute_type=compute)
+    except Exception as err:
+        if isModelInstalled(model) is False:
+            raise DownloadFailed('could not download speech recognition model, '
+                    'check internet connection ({})'.format(err))
+        raise
+
+
+# approximate download size of the models, in bytes
+modelSizes = {
+        'tiny': 75e6, 'base': 145e6, 'small': 486e6, 'medium': 1530e6,
+        'large-v2': 3090e6, 'large-v3': 3090e6,
+        }
+
+_download = None    # running model download, shared by all callers
+
+
+class DownloadFailed(Exception):
+    """Model could not be downloaded, usually there is no internet."""
+
+
+def getModelSize(model=None):
+    """Approximate model download size in bytes, `None` if not known."""
+    return modelSizes.get(model or defaultModel())
+
+
+def isModelInstalled(model=None):
+    """Check whether the model is already downloaded.
+
+    Returns
+    -------
+    bool or None
+        `None` when it cannot be told, because faster-whisper runs in
+        separate Python (it then downloads the model itself).
+    """
+    model = model or defaultModel()
+    if os.path.isdir(model):
+        return True
+    if not _hasModule():
+        return None
+    try:
+        from faster_whisper.utils import download_model
+        download_model(model, local_files_only=True)
+        return True
+    except Exception:
+        return False
+
+
+def _downloadedBytes(model):
+    """Bytes of the model already on disk, including partial files."""
+    try:
+        from faster_whisper.utils import _MODELS
+        from huggingface_hub.constants import HF_HUB_CACHE
+        repo = _MODELS.get(model, model)
+        folder = os.path.join(HF_HUB_CACHE, 'models--' + repo.replace('/', '--'))
+        total = 0
+        for root, dirs, files in os.walk(folder):
+            for name in files:
+                path = os.path.join(root, name)
+                if not os.path.islink(path):
+                    total += os.path.getsize(path)
+        return total
+    except Exception:
+        return 0
+
+
+def downloadModel(model=None, runCb=None, progressCb=None):
+    """Download the model to the Hugging Face cache, unless already there.
+
+    Download continues in background if `runCb` stops waiting for it, and the
+    next call waits for the same download. Partially downloaded files are
+    resumed.
+
+    Parameters
+    ----------
+    runCb: callable, optional
+        Called periodically, stop waiting when it returns `False`.
+    progressCb: callable, optional
+        Called periodically with (downloaded bytes, expected size or `None`).
+
+    Returns
+    -------
+    bool
+        `True` when downloaded, `False` when stopped by `runCb`.
+
+    Raises
+    ------
+    DownloadFailed
+    """
+    import threading
+    import time
+    global _download
+
+    model = model or defaultModel()
+    if isModelInstalled(model) is not False:
+        return True
+
+    if _download is None or not _download['thread'].is_alive():
+        state = { 'error': None, 'model': model }
+
+        def run():
+            try:
+                from faster_whisper.utils import download_model
+                logger.info('downloading whisper model %s', model)
+                download_model(model)
+                logger.info('whisper model %s downloaded', model)
+            except Exception as err:
+                logger.warning('whisper model download failed: %r', err, exc_info=True)
+                state['error'] = err
+
+        state['thread'] = threading.Thread(target=run, name='ModelDownload', daemon=True)
+        state['thread'].start()
+        _download = state
+
+    state = _download
+    size = getModelSize(model)
+    while state['thread'].is_alive():
+        if progressCb:
+            progressCb(_downloadedBytes(model), size)
+        if runCb and not runCb():
+            return False
+        state['thread'].join(timeout=0.25)
+
+    if state['error'] is not None:
+        raise DownloadFailed('could not download speech recognition model, '
+                'check internet connection ({})'.format(state['error']))
+    return True
 
 
 def transcribeRange(whisper, path, streamNo, start, end, lang, translate=False,

@@ -3,6 +3,7 @@ from subsync.synchro import speech, transcribe
 from subsync.data import languages
 from subsync.translations import _
 from subsync.error import Error
+from subsync import utils
 import math
 import threading
 import time
@@ -276,6 +277,12 @@ class TranscriptPipeline(object):
         self._status(_('Transcribing audio, preparing...'))
         self.lastStatusMinute = None
         try:
+            # normally downloaded before synchronization starts, after asking
+            if transcribe.isModelInstalled() is False:
+                if not transcribe.downloadModel(runCb=self._isRunning,
+                        progressCb=self._onDownload):
+                    raise transcribe.Terminated()
+
             self.finished = transcribe.getTranscriptChunks(
                     self.stream.path, self.stream.no, self.stream.lang,
                     translate=self.translate,
@@ -286,6 +293,12 @@ class TranscriptPipeline(object):
 
         except transcribe.Terminated:
             logger.info('transcription terminated')
+
+        except transcribe.DownloadFailed as err:
+            logger.warning('%s', err)
+            if self.errorCb:
+                self.errorCb(Error(_("Couldn't download the speech recognition "
+                    "model, check your internet connection")).add('details', str(err)))
 
         except Exception as err:
             logger.warning('transcription failed: %r', err, exc_info=True)
@@ -298,6 +311,13 @@ class TranscriptPipeline(object):
             self.running = False
             if self.eosCb:
                 self.eosCb()
+
+    def _onDownload(self, pos, size):
+        msg = _('Downloading speech recognition model (first use only): {}') \
+                .format(utils.fileSizeFmt(pos))
+        if size:
+            msg += ' / {}'.format(utils.fileSizeFmt(size))
+        self._status(msg)
 
     def _onPlan(self, chunks):
         self.chunksNo = len(chunks)
