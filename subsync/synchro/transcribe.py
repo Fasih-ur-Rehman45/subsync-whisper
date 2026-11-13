@@ -120,6 +120,20 @@ piecewiseRange = 600.0
 piecewiseSplitCost = 10.0
 piecewiseFineRange = 0.5    # each piece is then fine tuned this far
 
+# fitting subtitle lines to speech overlap leaves them slightly late: correct
+# subtitles appear a moment before people start speaking. Synchronized lines
+# are moved so that their starts lead speech by leadTarget seconds (median of
+# lines that follow a pause and have one clear speech start within leadReach
+# seconds); measured on correct subtitles of 9 films: 0.16 - 0.31 s, median
+# 0.25 s. Not done when fewer than leadMinLines lines are measured, or when it
+# would move lines more than leadMaxShift seconds.
+leadTarget = 0.25
+leadGap = 0.4
+leadReach = 1.0
+leadClear = 0.4
+leadMinLines = 30
+leadMaxShift = 0.3
+
 
 class Terminated(Exception):
     """Transcription was cancelled by the caller."""
@@ -1075,6 +1089,62 @@ def alignPiecewise(subs, speech, a, b):
                 formatTime(mapped[last - 1][0] + shift)[:8], last - first, b + shift)
 
     return offsets
+
+
+def measureLead(lines, speech):
+    """How long before speech subtitle lines start, see `leadShift`.
+
+    Returns
+    -------
+    tuple of (float, int) or None
+        Median lead (seconds, positive when lines start before speech) and
+        the number of lines measured, `None` when no line could be measured.
+    """
+    import bisect
+
+    onsets = sorted(start for start, end in speech)
+    leads = []
+    lines = sorted(lines)
+    for i, (start, end) in enumerate(lines):
+        # lines right after another line often start in the middle of speech
+        if i and start - lines[i - 1][1] < leadGap:
+            continue
+        lo = bisect.bisect_left(onsets, start - leadReach)
+        hi = bisect.bisect_right(onsets, start + leadReach)
+        near = sorted((abs(onset - start), onset - start) for onset in onsets[lo:hi])
+        if not near:
+            continue
+        second = near[1][0] if len(near) > 1 else 2 * leadReach
+        if second - near[0][0] >= leadClear:
+            leads.append(near[0][1])
+
+    if not leads:
+        return None
+    leads.sort()
+    mid = len(leads) // 2
+    median = leads[mid] if len(leads) % 2 else (leads[mid - 1] + leads[mid]) / 2
+    return median, len(leads)
+
+
+def leadShift(lines, speech):
+    """Shift (seconds) that makes synchronized subtitle lines start
+    `leadTarget` seconds before speech, as correct subtitles do.
+
+    Synchronization fits subtitle lines over speech, which leaves them a
+    little late (about 0.1 s on average). Returns 0 when there is too little
+    evidence or the shift would be implausibly large.
+    """
+    res = measureLead(lines, speech)
+    if not res or res[1] < leadMinLines:
+        logger.info('speech start lead: too few lines measured (%s)', res)
+        return 0.0
+    shift = res[0] - leadTarget
+    logger.info('speech start lead: lines start %.3f s before speech (%i lines), '
+            'shift %+.3f s', res[0], res[1], shift)
+    if abs(shift) > leadMaxShift:
+        logger.info('speech start lead: shift too large, not applied')
+        return 0.0
+    return shift
 
 
 def writeSrt(path, lines):

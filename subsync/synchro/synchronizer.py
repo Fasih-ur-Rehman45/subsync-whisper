@@ -166,8 +166,11 @@ class Synchronizer(object):
                     'speech in every region', chunksDone, res[0], res[1])
             return self._transcriptMismatch(subs, speech, chunks, res)
 
+        # lines start a moment before speech, like correct subtitles do
+        shift = transcribe.leadShift([ (res[0] * s[0] + res[1], res[0] * s[1] + res[1])
+            for s in subs ], speech)
         with self.statsLock:
-            self.refinedFormula = gizmo.Line(res[0], res[1])
+            self.refinedFormula = gizmo.Line(res[0], res[1] + shift)
         logger.info('after %i transcript chunks: %s confirmed by speech, polished to %s',
                 chunksDone, stats.formula, self.refinedFormula)
         return 'confirmed'
@@ -193,6 +196,9 @@ class Synchronizer(object):
             mapped = [ (a * s[0] + o, a * s[1] + o, s[2]) for s, o in zip(subs, offsets) ]
             if transcribe.checkChunks(mapped, chunks, 1.0, 0.0, self.minWordLen) \
                     and transcribe.checkRegions([ m[:2] for m in mapped ], speech, 1.0, 0.0):
+                # lines start a moment before speech, like correct subtitles do
+                shift = transcribe.leadShift([ m[:2] for m in mapped ], speech)
+                offsets = [ o + shift for o in offsets ]
                 # formula of the longest piece is the one shown
                 main = max(set(offsets), key=offsets.count)
                 with self.statsLock:
