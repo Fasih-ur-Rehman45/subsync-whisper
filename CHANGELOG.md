@@ -6,9 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ## [Unreleased]
 
-## [0.19] - 2026-11-13
+## [0.19] - 2026-11-14
 
 ### Added
+- **More accurate timing.** Lines now start a moment before people speak, the way subtitles are written, instead of sitting over the speech a little late. The lead is a typical value (a quarter second) measured on the test films' correct subtitles. On 8 of the 9 test films, lines are now on average 0.04 s from the correct timing instead of 0.12 s.
 - **The audio language is detected automatically.** Most video files don't say which language their audio is in, so it no longer has to be selected by hand: when it's not set, SubSync listens to a few minutes of speech and selects it, in about 10 seconds. This works in the app, in batch mode and on the command line.
 - **Portable `.exe`**, like the original SubSync's: run it, choose where to unpack, and it creates a `subsync` folder with the app. The zip is still available.
 
