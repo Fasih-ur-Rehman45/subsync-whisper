@@ -19,6 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - A bug report form on GitHub asks for the details needed to fix a problem, including the log. The README explains how to save the log.
 - This changelog was added. Release pages take their "What's new" from it, and a release can't be published without an entry.
 
+### Fixed
+- "Please wait" windows (detecting the audio language, downloading the list of speech models for other languages) failed with the current wxPython and are shown again.
+
 ## [0.18] - 2026-11-13
 
 ### Added
