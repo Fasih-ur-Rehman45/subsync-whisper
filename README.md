@@ -17,16 +17,18 @@ This version adds **Japanese audio**. The original SubSync has no speech model f
 
 ## Installing
 
-1. Download the zip from **[Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/latest)**.
-2. Unzip it anywhere, for example to `Downloads\SubSync`.
-3. Run **`subsync.exe`**.
+1. Download **`subsync-<version>-portable-amd64.exe`** from **[Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/latest)**.
+2. Run it and choose where to unpack, for example `Downloads`. It creates a `subsync` folder.
+3. Open that folder and run **`subsync.exe`**.
+
+The same app is also available as a zip (`subsync-<version>-windows-x64.zip`). Unzip it anywhere and run `subsync.exe`.
 
 Windows may show *"Windows protected your PC"* the first time, because SubSync is new and not yet known to Windows. Click **More info**, then **Run anyway**.
 
 ## Using it
 
 1. **Subtitles:** choose your subtitle file and set its language to **English**.
-2. **References:** choose the video file and set its language to **Japanese**.
+2. **References:** choose the video file. If its language box stays empty, leave it: SubSync detects the spoken language when you click Start (about 10 seconds).
 3. Click **Start**. The first time only, agree to download the speech model (about 490 MB).
 4. When it says **Subtitles synchronized**, click **Save**.
 
