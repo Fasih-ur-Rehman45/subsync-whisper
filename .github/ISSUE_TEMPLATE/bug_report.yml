@@ -2,15 +2,6 @@ name: Bug report
 description: SubSync couldn't synchronize, gave wrong timing, or didn't work
 labels: [bug]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for reporting! The details below let the problem be found and fixed.
-
-        Before you start, check the **Reading the result** and **Known limits** sections of the [README](https://github.com/Fasih-ur-Rehman45/subsync-whisper#readme). Your problem may already be explained there.
-
-        Please don't attach videos or other copyrighted files.
-
   - type: input
     id: version
     attributes:
