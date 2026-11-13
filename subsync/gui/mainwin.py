@@ -145,9 +145,13 @@ class MainWin(subsync.gui.layout.mainwin.MainWin):
 
     @error_dlg
     def start(self, task, askForLang=True):
+        assetsdlg.detectLanguages(self, [task])
         validator.validateTask(task)
         logRunCmd(task)
         if assetsdlg.validateAssets(self, [task], askForLang=askForLang):
+            # language may have been detected
+            if task.ref is self.m_panelRef.stream:
+                self.m_panelRef.m_choiceSubLang.SetValue(task.ref.lang)
             with SyncWin(self, task) as dlg:
                 dlg.ShowModal()
 

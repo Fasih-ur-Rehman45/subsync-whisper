@@ -71,6 +71,7 @@ class BatchWin(subsync.gui.layout.batchwin.BatchWin):
     def start(self):
         try:
             tasks = self.m_items.getTasks()
+            assetsdlg.detectLanguages(self, tasks)
             validator.validateTasks(tasks, outputRequired=True)
 
             if assetsdlg.validateAssets(self, tasks, askForLang=True):

@@ -1,14 +1,17 @@
 import wx
 from subsync.gui.downloadwin import DownloadWin
-from subsync.gui.busydlg import BusyDlg
+from subsync.gui.busydlg import BusyDlg, showBusyDlgAsyncJob
 from subsync.gui.components import popups
 from subsync.assets import assetManager
 from subsync.data import descriptions
 from subsync.settings import settings
 from subsync.error import Error
-from subsync.synchro import transcribe
+from subsync.synchro import transcribe, langdetect
 from subsync import utils
 import threading
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 def validateAssets(parent, tasks, updateAssets=True, askForLang=True, autoSave=False):
@@ -40,9 +43,32 @@ def needsSpeechModel(tasks):
     return any(task.ref and task.ref.type == 'audio' and transcribe.supports(task.ref.lang)
             for task in tasks)
 
-def askForDownloadSpeechModel(parent):
+def detectLanguages(parent, tasks):
+    ''' Detect audio language of references that don't have one set, before
+    tasks are validated. When it isn't detected, the user has to select it as
+    before. '''
+    tasks = [ task for task in tasks if langdetect.needsDetection(task) ]
+    if not tasks:
+        return
+
+    if transcribe.isModelInstalled() is False:
+        msg = _('The audio language is not selected. SubSync can detect it with '
+                'the Whisper speech recognition model.')
+        if not askForDownloadSpeechModel(parent, msg):
+            return
+
+    for no, task in enumerate(tasks):
+        msg = _('Detecting audio language...')
+        if len(tasks) > 1:
+            msg += ' ({}/{})'.format(no + 1, len(tasks))
+        try:
+            showBusyDlgAsyncJob(parent, msg, langdetect.detect, task)
+        except Exception as err:
+            logger.warning('audio language detection failed: %r', err, exc_info=True)
+
+def askForDownloadSpeechModel(parent, reason=None):
     size = transcribe.getModelSize()
-    msg  = [ _('Speech in this language is recognized with the Whisper speech recognition model.') ]
+    msg  = [ reason or _('Speech in this language is recognized with the Whisper speech recognition model.') ]
     if size:
         msg += [ _('It must be downloaded once ({}) and is kept for later use.').format(utils.fileSizeFmt(size)) ]
     msg += [ '', _('Download now?') ]
