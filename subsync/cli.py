@@ -2,6 +2,7 @@ from subsync.synchro import SyncController
 from subsync.assets import assetManager
 from subsync.settings import settings
 from subsync import validator, utils, error
+from subsync.synchro import transcribe
 import time
 import threading
 
@@ -40,6 +41,11 @@ class Printer(object):
 pr = Printer()
 
 
+def needsSpeechModel(tasks):
+    return any(task.ref and task.ref.type == 'audio' and transcribe.supports(task.ref.lang)
+            for task in tasks)
+
+
 class AssetsVerifier(object):
     def run(self, tasks):
         assets = assetManager().getAssetsForTasks(tasks)
@@ -47,8 +53,12 @@ class AssetsVerifier(object):
         if assets.notInstalled():
             self.printMissingAssets(assets.notInstalled())
             return False
-        else:
-            return True
+
+        if needsSpeechModel(tasks) and transcribe.isModelInstalled() is False:
+            pr.println(0, '[!] speech recognition model is not downloaded yet, run without --offline once')
+            return False
+
+        return True
 
     def printMissingAssets(self, assets):
         pr.println(0, '[!] there is no assets needed to perform synchronization')
@@ -65,7 +75,31 @@ class AssetsDownloader(AssetsVerifier):
             self.printMissingAssets(assets.missing())
             return False
 
-        return self.installAssets(assets.hasUpdate())
+        if not self.installAssets(assets.hasUpdate()):
+            return False
+
+        if needsSpeechModel(tasks) and transcribe.isModelInstalled() is False:
+            return self.downloadSpeechModel()
+
+        return True
+
+    def downloadSpeechModel(self):
+        size = transcribe.getModelSize()
+        pr.println(1, '[+] downloading speech recognition model, first use only{}'.format(
+            ' ({})'.format(utils.fileSizeFmt(size)) if size else ''))
+
+        def onProgress(pos, size):
+            msg = '[+] downloading speech recognition model: ' + utils.fileSizeFmt(pos)
+            if size:
+                msg += ' / ' + utils.fileSizeFmt(size)
+            pr.reprint(1, msg)
+
+        try:
+            return transcribe.downloadModel(progressCb=onProgress)
+        except transcribe.DownloadFailed as err:
+            pr.println(0, "[!] couldn't download speech recognition model, check internet connection")
+            pr.println(1, '[-] {}'.format(err))
+            return False
 
     def updateAssetList(self):
         listUpdater = assetManager().getAssetListUpdater()
