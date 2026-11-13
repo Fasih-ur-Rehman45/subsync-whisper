@@ -30,6 +30,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      # before the long build: a release needs its CHANGELOG.md entry
+      - name: Check changelog
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python .github/release_notes.py "${{ github.ref_name }}" release-notes.md
+
       - uses: microsoft/setup-msbuild@v2
 
       - name: Get sphinxbase and pocketsphinx sources
@@ -116,4 +121,4 @@ jobs:
           name="subsync-$TAG-windows-x64.zip"
           (cd dist && 7z a -tzip -mx=7 "../$name" subsync > /dev/null)
           ls -l "$name"
-          gh release create "$TAG" "$name" --title "SubSync $TAG" --notes-file .github/release-notes.md
+          gh release create "$TAG" "$name" --title "SubSync $TAG" --notes-file release-notes.md

@@ -1,23 +1,20 @@
+<!-- Release page template. The release workflow replaces {{VERSION}} with the
+     version and {{CHANGES}} with that version's section of CHANGELOG.md. -->
 **SubSync can now synchronize subtitles to Japanese audio.**
 
-The original SubSync matches subtitles to speech it recognizes in the film's audio. It has no speech model for Japanese, so anime and other Japanese films couldn't be synchronized. This release recognizes Japanese speech with the Whisper speech recognition model and translates it to English, so English subtitles can be matched to Japanese films. Everything runs on your own computer.
+The original SubSync matches subtitles to speech it recognizes in the film's audio. It has no speech model for Japanese, so anime and other Japanese films couldn't be synchronized. This version recognizes Japanese speech with the Whisper speech recognition model and translates it to English, so English subtitles can be matched to Japanese films. Everything runs on your own computer.
 
 ## What's new
 
-- **Japanese audio support.** English subtitles can now be synchronized to Japanese films.
-- **34 more languages** without a SubSync speech model are now handled the same way. They are untested so far; see the full list below.
-- **Wrong results are refused.** The timing is saved only when the detected speech and every part of the film agree with it. Otherwise SubSync says it couldn't synchronize instead of giving you bad subtitles.
-- **Subtitles from a different cut** (scenes added or removed) are synchronized piece by piece.
-- **One-time model download.** The first Japanese sync asks before downloading the speech model (about 490 MB) and shows its progress.
-- Built for current Windows: Python 3.12, with everything included in one folder.
+{{CHANGES}}
 
 ## Install
 
-1. Download **`subsync-0.18-windows-x64.zip`** under *Assets* below.
+1. Download **`subsync-{{VERSION}}-windows-x64.zip`** under *Assets* below.
 2. Unzip it anywhere, for example to `Downloads\SubSync`.
 3. Run **`subsync.exe`**.
 
-The app isn't signed, so Windows may show *"Windows protected your PC"* the first time. Click **More info**, then **Run anyway**.
+Windows may show *"Windows protected your PC"* the first time, because SubSync is new and not yet known to Windows. Click **More info**, then **Run anyway**.
 
 ## Sync English subtitles to a Japanese film
 
