@@ -1,4 +1,4 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Guide and troubleshooting
     url: https://github.com/Fasih-ur-Rehman45/subsync-whisper#readme

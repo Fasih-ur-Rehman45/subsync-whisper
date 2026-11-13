@@ -80,15 +80,6 @@ body:
       label: How long did it run?
       placeholder: "about 3 minutes"
 
-  - type: input
-    id: computer
-    attributes:
-      label: Computer
-      description: Windows version, processor and RAM.
-      placeholder: "Windows 11, AMD Ryzen 7 5800H, 16 GB"
-    validations:
-      required: true
-
   - type: textarea
     id: log
     attributes:
