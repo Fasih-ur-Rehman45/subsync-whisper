@@ -13,7 +13,8 @@ else:
 if sys.platform == 'win32':
     configdir = os.path.join(os.environ['APPDATA'], appname)
     shareddir = os.path.join(os.environ['ALLUSERSPROFILE'], appname)
-    assetupd  = 'subsync/win-x86_64'
+    # no update server for this build, the original one would replace it
+    assetupd  = None
 
 elif sys.platform == 'linux':
     configdir = os.path.join(os.path.expanduser('~'), '.config', appname)
@@ -23,7 +24,7 @@ elif sys.platform == 'linux':
 elif sys.platform == 'darwin':
     configdir = os.path.join(os.path.expanduser('~'), 'Library', 'Preferences', appname)
     shareddir = configdir
-    assetupd = 'subsync/mac-x86_64'
+    assetupd = None
 
 else:
     configdir = datadir
