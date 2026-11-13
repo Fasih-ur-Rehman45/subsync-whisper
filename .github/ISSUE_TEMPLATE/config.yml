@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Guide and troubleshooting
+    url: https://github.com/Fasih-ur-Rehman45/subsync-whisper#readme
+    about: How to use SubSync, what its messages mean, and its known limits.

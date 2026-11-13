@@ -1,0 +1,111 @@
+name: Bug report
+description: SubSync couldn't synchronize, gave wrong timing, or didn't work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The details below let the problem be found and fixed.
+
+        Before you start, check the **Reading the result** and **Known limits** sections of the [README](https://github.com/Fasih-ur-Rehman45/subsync-whisper#readme). Your problem may already be explained there.
+
+        Please don't attach videos or other copyrighted files.
+
+  - type: input
+    id: version
+    attributes:
+      label: SubSync version
+      description: Shown in the menu (⋮), under **About**.
+      placeholder: "0.18"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What happened?
+      options:
+        - "\"Couldn't synchronize\""
+        - "\"Subtitles do not fit this video as a whole\""
+        - Synchronized, but the timing is wrong
+        - The speech model download failed
+        - SubSync crashed, froze or wouldn't start
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Describe the problem
+      description: |
+        The exact message SubSync showed, and what you expected instead.
+        If the timing is wrong: where in the film, and how far off (for example, "from 1:05:00 on, lines show about 3 seconds late").
+    validations:
+      required: true
+
+  - type: input
+    id: languages
+    attributes:
+      label: Languages
+      description: The subtitle language and the audio language you selected.
+      placeholder: "English subtitles, Japanese audio"
+    validations:
+      required: true
+
+  - type: input
+    id: video
+    attributes:
+      label: Video
+      description: Length, file type, and the audio track used, if the film has several.
+      placeholder: "2 h 4 min, .mkv, Japanese 5.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: subtitle-source
+    attributes:
+      label: Were the subtitles made for this exact release of the film?
+      description: For example, a file named for the same release, or extracted from the same video.
+      options:
+        - "Yes"
+        - Not sure
+        - "No, they're from a different release or cut"
+    validations:
+      required: true
+
+  - type: input
+    id: time
+    attributes:
+      label: How long did it run?
+      placeholder: "about 3 minutes"
+
+  - type: input
+    id: computer
+    attributes:
+      label: Computer
+      description: Windows version, processor and RAM.
+      placeholder: "Windows 11, AMD Ryzen 7 5800H, 16 GB"
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        The log shows what SubSync did and is the most useful part of a report. To get it:
+        1. Open the SubSync folder, click the address bar, type `cmd` and press Enter.
+        2. Run `subsync.exe --loglevel=INFO --logfile=log.txt`
+        3. Repeat the sync, close SubSync, and paste the contents of `log.txt` here.
+
+        The log contains file paths. You can replace your user name in them before posting.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I've read the README's "Reading the result" and "Known limits" sections.
+          required: true
