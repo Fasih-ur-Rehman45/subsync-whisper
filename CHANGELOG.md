@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 ### Changed
 - The README now describes this version: install, use, results, troubleshooting and credits.
 - The About window's Website button opens this project's page. Its credits now include the speech recognition components, and FFmpeg's license is corrected to GPL-3.0 with a link to its source code.
-- The release notes explain the Windows warning more accurately.
+- Release pages are now a short overview (what's new and how to get started) that links to the README for the full guide.
 - This changelog was added. Release pages take their "What's new" from it, and a release can't be published without an entry.
 
 ## [0.18] - 2026-11-13
