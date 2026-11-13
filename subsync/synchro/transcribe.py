@@ -341,6 +341,86 @@ def decodeRange(path, streamNo=None, start=0.0, end=None, runCb=None):
     return audio.astype(np.float32) / 32768.0
 
 
+# --- language detection ----------------------------------------------------
+
+# audio language is detected from a few minutes taken from these positions
+# (fractions of the length), skipping intros and credits; only speech counts
+detectPositions = (0.3, 0.5, 0.7)
+detectLength = 120.0
+detectSegments = 4          # 30 s pieces of speech the model listens to
+detectMinProbability = 0.5
+
+
+def _duration(path, streamNo):
+    import av
+    with av.open(path) as container:
+        stream = _openAudio(container, path, streamNo)
+        if stream.duration and stream.time_base:
+            return float(stream.duration * stream.time_base)
+        if container.duration:
+            return container.duration / 1000000.0
+    return None
+
+
+def detectLanguage(path, streamNo=None, model=None, runCb=None):
+    """Detect language spoken in the audio stream, in this process.
+
+    Returns
+    -------
+    tuple of (str, float)
+        Whisper language code (e.g. 'ja') and its probability, or `None`
+        when there is too little speech or the model is not sure.
+    """
+    import numpy as np
+
+    length = _duration(path, streamNo)
+    if length and length > 3 * detectLength:
+        ranges = [ (length * pos, length * pos + detectLength) for pos in detectPositions ]
+    else:
+        ranges = [ (0.0, None) ]
+
+    audio = np.concatenate([ decodeRange(path, streamNo, start, end, runCb)
+        for start, end in ranges ])
+    if runCb and not runCb():
+        raise Terminated()
+
+    whisper = loadModel(model)
+    lang, prob, _all = whisper.detect_language(audio, vad_filter=True,
+            language_detection_segments=detectSegments)
+    logger.info('detected audio language: %s (%.0f%%)', lang, 100 * prob)
+    if prob < detectMinProbability:
+        return None
+    return lang, prob
+
+
+def getLanguage(path, streamNo=None, model=None, runCb=None):
+    """Detect spoken language like `detectLanguage`, in this process or in
+    separate Python (see `findPython`)."""
+    if _hasModule():
+        return detectLanguage(path, streamNo, model, runCb)
+
+    import subprocess
+    python = findPython()
+    if not python:
+        raise NotInstalled()
+    cmd = [ python, os.path.abspath(__file__), path, '--detect-language' ]
+    if streamNo is not None:
+        cmd += [ '--stream', str(streamNo + 1) ]
+    if model:
+        cmd += [ '--model', model ]
+    flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            creationflags=flags)
+    for line in res.stdout.decode('utf-8', 'replace').splitlines():
+        fields = line.split()
+        if len(fields) == 3 and fields[0] == 'language':
+            return fields[1], float(fields[2])
+        if fields == [ 'language', 'none' ]:
+            return None
+    raise RuntimeError('language detection failed: {}'.format(
+        res.stderr.decode('utf-8', 'replace').strip().splitlines()[-1:]))
+
+
 # --- transcription ---------------------------------------------------------
 
 def timeLines(lines):
@@ -1305,6 +1385,8 @@ def main(argv=None):
             help='write chunks to this directory, in spread order (used by SubSync)')
     parser.add_argument('--machine', action='store_true',
             help='print progress in machine readable form')
+    parser.add_argument('--detect-language', action='store_true',
+            help='only print the spoken language (whisper code) and its probability')
     args = parser.parse_args(argv)
     streamNo = None if args.stream is None else args.stream - 1
 
@@ -1320,6 +1402,11 @@ def main(argv=None):
             sys.stderr.flush()
 
     try:
+        if args.detect_language:
+            res = detectLanguage(args.input, streamNo, model=args.model)
+            print('language {} {:.3f}'.format(*res) if res else 'language none')
+            return 0
+
         if args.chunks_dir:
             transcribeChunks(args.input, args.chunks_dir, args.lang,
                     streamNo=streamNo, model=args.model, translate=args.translate,
