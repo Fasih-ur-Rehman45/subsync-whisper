@@ -32,10 +32,17 @@ class AboutWin(subsync.gui.layout.aboutwin.AboutWin):
         dlg.ShowModal()
 
     def onButtonWebsiteClick(self, event):
-        wx.LaunchDefaultBrowser('http://sc0ty.github.io/subsync')
+        wx.LaunchDefaultBrowser('https://github.com/Fasih-ur-Rehman45/subsync-whisper')
 
 
-credits='''FFmpeg - Copyright (c) the FFmpeg developers - LGPLv2.1 or later
+credits='''SubSync - Copyright (c) Michal Szymaniak - GPLv3 - https://github.com/sc0ty/subsync
+faster-whisper - Copyright (c) 2023 SYSTRAN - MIT license
+CTranslate2 - Copyright (c) the OpenNMT authors - MIT license
+Whisper model - Copyright (c) 2022 OpenAI - MIT license
+Silero VAD - Copyright (c) Silero Team - MIT license
+ONNX Runtime - Copyright (c) Microsoft Corporation - MIT license
+PyAV - Copyright retained by original committers - BSD license
+FFmpeg - Copyright (c) the FFmpeg developers - GPLv3 (gyan.dev build) - source: https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz
 CMU Sphinx - Copyright (c) 1999-2016 Carnegie Mellon University - BSD license
 wxWindows - Copyright (c) 1998-2005 Julian Smart, Robert Roebling et al - wxWindows Library Licence
 pybind11 - Copyright (c) 2016 Wenzel Jakob - BSD license
