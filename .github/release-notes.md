@@ -1,7 +1,7 @@
 <!-- Release page template. The release workflow replaces {{VERSION}} with the
      version and {{CHANGES}} with that version's section of CHANGELOG.md.
      Keep it a short overview: the full guide is README.md. -->
-SubSync synchronizes subtitles to a video's audio. This version also handles **Japanese audio**: English subtitles are synchronized to Japanese films, in about 2–3 minutes on an ordinary laptop, without a graphics card.
+SubSync synchronizes subtitles to a video's audio. This version adds **Japanese audio**, so English subtitles can be synchronized to Japanese films.
 
 ## What's new
 
@@ -10,7 +10,7 @@ SubSync synchronizes subtitles to a video's audio. This version also handles **J
 ## Get started
 
 1. Download **`subsync-{{VERSION}}-portable-amd64.exe`** below and run it to unpack SubSync, then run **`subsync.exe`** in the new `subsync` folder. (Or use the zip: unzip it and run `subsync.exe`.)
-2. Choose your subtitles (language **English**) and the video (language **Japanese**), then click **Start**.
+2. Choose your subtitles (language **English**) and the video, then click **Start**. SubSync detects that the audio is Japanese.
 3. The first time, SubSync downloads its speech model (about 490 MB, once).
 
 Needs 64-bit Windows 10 or 11 and 8 GB of RAM. If Windows shows *"Windows protected your PC"*, click **More info**, then **Run anyway**.
