@@ -105,10 +105,40 @@ jobs:
           dist\subsync\subsync-cmd.exe --version
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
+      # self-extracting archive like the original SubSync's portable exe: it
+      # asks where to unpack and creates a subsync folder with the app
+      - name: Make portable exe
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            version="$GITHUB_REF_NAME"
+          else
+            version=$(python -c "from subsync.version import version_short; print(version_short)")
+          fi
+          name="subsync-$version-portable-amd64.exe"
+          sfx=$(cygpath -w "/c/Program Files/7-Zip/7z.sfx")
+          (cd dist && 7z a -t7z -mx=9 -mmt=on "-sfx$sfx" "../$name" subsync > /dev/null)
+          ls -l "$name"
+          echo "PORTABLE=$name" >> "$GITHUB_ENV"
+
+      - name: Test portable exe
+        shell: bash
+        run: |
+          "./$PORTABLE" -y -oportable-test
+          portable-test/subsync/subsync-cmd.exe --version
+          rm -rf portable-test
+
       - uses: actions/upload-artifact@v4
         with:
           name: subsync-windows-x64
           path: dist/subsync
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subsync-portable-windows-x64
+          path: ${{ env.PORTABLE }}
+          compression-level: 0
           if-no-files-found: error
 
       - name: Publish release
@@ -121,4 +151,4 @@ jobs:
           name="subsync-$TAG-windows-x64.zip"
           (cd dist && 7z a -tzip -mx=7 "../$name" subsync > /dev/null)
           ls -l "$name"
-          gh release create "$TAG" "$name" --title "SubSync $TAG" --notes-file release-notes.md
+          gh release create "$TAG" "$PORTABLE" "$name" --title "SubSync $TAG" --notes-file release-notes.md
