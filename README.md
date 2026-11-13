@@ -60,10 +60,11 @@ The test used nine 2-hour Japanese films, with deliberately mistimed copies of c
 | Result | Films |
 |---|---|
 | **All lines within 0.2 s** of the correct timing | 7 of 9 |
-| Follows the speech, but the subtitle file itself was slightly off (drifting, or late everywhere) | 2 of 9 |
-| Different cut, synced piece by piece: 80–99% of lines within 0.2 s | 5 of 5 |
+| 90–100% of lines within 0.2 s (a film with few subtitle lines) | 1 of 9 |
+| Lines about 0.6 s early (this subtitle file shows every line after the speech starts) | 1 of 9 |
+| Different cut, synced piece by piece: 90–100% of lines within 0.2 s | 6 of 6 |
 
-A 0.2 s difference isn't noticeable when watching.
+On the first eight films, lines are on average 0.04 s from the correct timing. A 0.2 s difference isn't noticeable when watching.
 
 **Test hardware:** a laptop with an AMD Ryzen 9 5900HX processor and 8 GB of RAM, using no graphics card.
 
@@ -81,7 +82,7 @@ Speech recognition runs on your computer. Your videos and subtitles are never up
 
 ## Known limits
 
-- Lines are timed to the speech. If a subtitle file was deliberately timed differently, for example showing each line after the speech starts, the result can differ from it by up to half a second.
+- Lines are timed to start a moment (about a quarter second) before people speak, a typical value measured on 9 films. If your subtitles were timed differently, for example showing each line after the speech starts, the result can differ from them by up to half a second. Adjust it in **Settings**, under **Output timing offset**.
 - Within a few lines of a cut, some lines may land on the wrong side.
 - Only Japanese has been tested so far. These audio languages use the same method but are untested: Albanian, Arabic, Belarusian, Bulgarian, Catalan, Croatian, Czech, Danish, Estonian, Faroese, Finnish, Galician, Hebrew, Hungarian, Icelandic, Indonesian, Korean, Latin, Latvian, Lithuanian, Malagasy, Malay, Maltese, Norwegian, Persian, Polish, Portuguese, Romanian, Serbian, Slovak, Slovenian, Swedish, Turkish, Ukrainian.
 - All other languages work as in the original SubSync.
