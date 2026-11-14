@@ -9,7 +9,7 @@ SubSync synchronizes subtitles to a video's audio. This version adds **Japanese 
 
 ## Get started
 
-1. **Windows:** download **`subsync-{{VERSION}}-portable-amd64.exe`** below and run it to unpack SubSync, then run **`subsync.exe`** in the new `subsync` folder (or use the zip). **Linux:** download **`subsync-{{VERSION}}-linux-x86_64.tar.gz`**, unpack it and run **`./subsync/subsync`**.
+1. **Windows:** download **`subsync-{{VERSION}}-portable-amd64.exe`** below and run it to unpack SubSync, then run **`subsync.exe`** in the new `subsync` folder (or use the zip). **Linux:** download **`subsync-{{VERSION}}-linux-x86_64.tar.xz`**, unpack it and run **`./subsync/subsync`**.
 2. Choose your subtitles and the video, then click **Start**. SubSync detects the audio language.
 3. The first time, SubSync downloads its speech model (about 490 MB, once).
 

@@ -25,10 +25,10 @@ The same app is also available as a zip (`subsync-<version>-windows-x64.zip`). U
 
 Windows may show *"Windows protected your PC"* the first time, because SubSync is new and not yet known to Windows. Click **More info**, then **Run anyway**.
 
-**Linux** (from 0.20): download `subsync-<version>-linux-x86_64.tar.gz`, unpack it anywhere and run the app:
+**Linux** (from 0.20): download `subsync-<version>-linux-x86_64.tar.xz`, unpack it anywhere and run the app:
 
 ```
-tar xzf subsync-<version>-linux-x86_64.tar.gz
+tar xf subsync-<version>-linux-x86_64.tar.xz
 ./subsync/subsync
 ```
 

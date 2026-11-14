@@ -244,13 +244,14 @@ jobs:
             version=$(python -c "from subsync.version import version_short; print(version_short)")
           fi
           mkdir release
-          tar czf "release/subsync-$version-linux-x86_64.tar.gz" -C dist subsync
+          # xz packs the app a third smaller than gzip
+          XZ_OPT=-9T0 tar cJf "release/subsync-$version-linux-x86_64.tar.xz" -C dist subsync
           ls -l release
 
       - name: Test archive
         run: |
           mkdir unpack-test
-          tar xzf release/*.tar.gz -C unpack-test
+          tar xJf release/*.tar.xz -C unpack-test
           unpack-test/subsync/subsync-cmd --version
           rm -rf unpack-test
 
