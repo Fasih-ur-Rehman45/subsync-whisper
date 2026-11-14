@@ -5,7 +5,7 @@ from PyInstaller.utils.hooks import collect_all
 # faster-whisper (audio transcription for languages without a speech model)
 # and its native parts: models runtime, voice detection model, audio decoder
 whisper_datas, whisper_binaries, whisper_hiddenimports = [], [], []
-for package in ('faster_whisper', 'ctranslate2', 'onnxruntime', 'av', 'tokenizers'):
+for package in ('faster_whisper', 'ctranslate2', 'onnxruntime', 'av', 'tokenizers', 'sentencepiece'):
     datas, binaries, hiddenimports = collect_all(package)
     whisper_datas += datas
     whisper_binaries += binaries
