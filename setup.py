@@ -1,5 +1,5 @@
 import sys, os, glob, re, subprocess, shutil
-import distutils.cmd, distutils.command.build_py
+import distutils.cmd, distutils.command.build_py, distutils.errors
 import setuptools
 import setuptools.command.build_ext
 from setuptools import setup, Extension
@@ -201,7 +201,7 @@ class build_ext(setuptools.command.build_ext.build_ext):
             f.write('int main (int argc, char **argv) { return 0; }')
             try:
                 self.compiler.compile([f.name], extra_postargs=[flagname])
-            except setuptools.distutils.errors.CompileError:
+            except distutils.errors.CompileError:
                 return False
         return True
 
