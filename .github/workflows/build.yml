@@ -227,7 +227,11 @@ jobs:
         run: |
           pyinstaller --noconfirm linux.spec
           cp LICENSE dist/subsync/
-          ls dist/subsync | head -40
+          du -sh dist/subsync
+          # biggest parts of the package
+          find dist/subsync -type f -printf '%s %p
+' | sort -rn | head -40 | awk '{printf "%6.1f MB  %s
+", $1/1e6, $2}'
 
       - name: Test package
         run: |
