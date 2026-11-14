@@ -230,6 +230,11 @@ jobs:
         run: |
           pyinstaller --noconfirm linux.spec
           cp LICENSE dist/subsync/
+          # the ready-made wxPython and the engine carry about 180 MB of
+          # debugging data; other libraries are left alone (stripping
+          # NumPy's bundled OpenBLAS breaks it)
+          find dist/subsync/_internal/wx -name '*.so*' -exec strip --strip-debug {} +
+          strip --strip-debug dist/subsync/_internal/gizmo*.so
           du -sh dist/subsync
           # biggest parts of the package
           find dist/subsync -type f -exec du -k {} + | sort -rn | head -40

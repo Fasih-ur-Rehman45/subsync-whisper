@@ -1,8 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller recipe for the Linux build: a portable folder with `subsync`
 # (window, or command line with --cli) and `subsync-cmd` (command line).
-# Libraries are stripped of debugging data: the ready-made wxPython alone
-# carries 150 MB of it.
+# Debugging data is removed from wxPython and the engine after packaging (see
+# the workflow); stripping every library breaks NumPy's bundled OpenBLAS.
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -41,7 +41,7 @@ main_exe = EXE(main_pyz,
         name='subsync',
         debug=False,
         bootloader_ignore_signals=False,
-        strip=True,
+        strip=False,
         upx=False,
         console=True)
 
@@ -53,7 +53,7 @@ main_cmd = EXE(main_pyz,
         name='subsync-cmd',
         debug=False,
         bootloader_ignore_signals=False,
-        strip=True,
+        strip=False,
         upx=False,
         console=True)
 
@@ -62,7 +62,7 @@ main_coll = COLLECT(main_exe,
         main_a.binaries,
         main_a.zipfiles,
         main_a.datas,
-        strip=True,
+        strip=False,
         upx=False,
         upx_exclude=[],
         name='subsync')
