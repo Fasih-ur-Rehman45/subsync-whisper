@@ -2,7 +2,7 @@ from subsync.synchro import SyncController
 from subsync.assets import assetManager
 from subsync.settings import settings
 from subsync import validator, utils, error
-from subsync.synchro import transcribe, langdetect
+from subsync.synchro import transcribe, translate, langdetect, route
 from subsync.data import languages
 import time
 import threading
@@ -43,8 +43,11 @@ pr = Printer()
 
 
 def needsSpeechModel(tasks):
-    return any(task.ref and task.ref.type == 'audio' and transcribe.supports(task.ref.lang)
-            for task in tasks)
+    return any(route.getRoute(task.sub, task.ref) in route.WHISPER for task in tasks)
+
+
+def needsTranslationModel(tasks):
+    return any(route.getRoute(task.sub, task.ref) == route.PIVOT for task in tasks)
 
 
 class AssetsVerifier(object):
@@ -57,6 +60,10 @@ class AssetsVerifier(object):
 
         if needsSpeechModel(tasks) and transcribe.isModelInstalled() is False:
             pr.println(0, '[!] speech recognition model is not downloaded yet, run without --offline once')
+            return False
+
+        if needsTranslationModel(tasks) and translate.isModelInstalled() is False:
+            pr.println(0, '[!] translation model is not downloaded yet, run without --offline once')
             return False
 
         return True
@@ -106,9 +113,28 @@ class AssetsDownloader(AssetsVerifier):
             return False
 
         if needsSpeechModel(tasks) and transcribe.isModelInstalled() is False:
-            return self.downloadSpeechModel()
+            if not self.downloadSpeechModel():
+                return False
+
+        if needsTranslationModel(tasks) and translate.isModelInstalled() is False:
+            return self.downloadTranslationModel()
 
         return True
+
+    def downloadTranslationModel(self):
+        pr.println(1, '[+] subtitles are translated to English for matching, downloading '
+                'translation model, first use only ({})'.format(utils.fileSizeFmt(translate.modelSize)))
+
+        def onProgress(pos, size):
+            pr.reprint(1, '[+] downloading translation model: {} / {}'.format(
+                utils.fileSizeFmt(pos), utils.fileSizeFmt(size)))
+
+        try:
+            return translate.downloadModel(progressCb=onProgress)
+        except translate.DownloadFailed as err:
+            pr.println(0, "[!] couldn't download translation model, check internet connection")
+            pr.println(1, '[-] {}'.format(err))
+            return False
 
     def downloadSpeechModel(self):
         size = transcribe.getModelSize()

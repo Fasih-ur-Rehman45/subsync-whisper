@@ -88,16 +88,18 @@ class AssetManager(object):
         subsync.assets.AssetList
         """
         # imported here to avoid circular import with subsync.synchro
-        from subsync.synchro import transcribe
+        from subsync.synchro import route
 
         assets = set()
         for task in tasks:
             sub, ref = task.sub, task.ref
-            # languages handled by whisper don't need a speech model asset
-            if ref and ref.type == 'audio' and not transcribe.supports(ref.lang):
+            way = route.getRoute(sub, ref)
+            # speech handled by whisper doesn't need a speech model asset
+            if ref and ref.type == 'audio' and way not in route.WHISPER:
                 assets.add(self.getAsset('speech', [ref.lang]))
-            # speech is translated to English by whisper, no dictionary needed
-            if ref and ref.type == 'audio' and transcribe.translates(ref.lang, sub and sub.lang):
+            # speech in English, or subtitles translated to English for
+            # matching: no dictionary needed
+            if way in (route.ENGLISH, route.PIVOT):
                 continue
             if sub and sub.lang and ref and ref.lang and sub.lang != ref.lang:
                 langs = sorted([sub.lang, ref.lang])

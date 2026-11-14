@@ -6,7 +6,8 @@ from subsync.assets import assetManager
 from subsync.data import descriptions
 from subsync.settings import settings
 from subsync.error import Error
-from subsync.synchro import transcribe, langdetect
+from subsync.synchro import transcribe, translate, langdetect, route
+from subsync.data import languages
 from subsync import utils
 import threading
 
@@ -37,11 +38,35 @@ def validateAssets(parent, tasks, updateAssets=True, askForLang=True, autoSave=F
         if not askForDownloadSpeechModel(parent):
             return False
 
+    translated = translatedTasks(tasks)
+    if translated and translate.isModelInstalled() is False:
+        if not askForDownloadTranslationModel(parent, translated[0].sub.lang):
+            return False
+
     return True
 
 def needsSpeechModel(tasks):
-    return any(task.ref and task.ref.type == 'audio' and transcribe.supports(task.ref.lang)
-            for task in tasks)
+    return any(route.getRoute(task.sub, task.ref) in route.WHISPER for task in tasks)
+
+def translatedTasks(tasks):
+    ''' Tasks whose subtitles are machine-translated to English for matching. '''
+    return [ task for task in tasks if route.getRoute(task.sub, task.ref) == route.PIVOT ]
+
+def askForDownloadTranslationModel(parent, lang):
+    msg  = [ _('{} subtitles are matched with the speech by translating them to '
+            'English on this computer, only for matching (your subtitles are not '
+            'changed).').format(languages.getName(lang)) ]
+    msg += [ _('The translation model must be downloaded once ({}) and is kept for later use.')
+            .format(utils.fileSizeFmt(translate.modelSize)) ]
+    msg += [ '', _('Download now?') ]
+    title = _('Download translation model')
+    flags = wx.YES_NO | wx.ICON_QUESTION
+    with wx.MessageDialog(parent, '\n'.join(msg), title, flags) as dlg:
+        if dlg.ShowModal() == wx.ID_YES:
+            return downloadModel(parent, translate.downloadModel, translate.modelSize,
+                    _('Download translation model'),
+                    _("Couldn't download the translation model, check your internet connection"))
+    return False
 
 def detectLanguages(parent, tasks):
     ''' Detect audio language of references that don't have one set, before
@@ -80,23 +105,27 @@ def askForDownloadSpeechModel(parent, reason=None):
     return False
 
 def downloadSpeechModel(parent):
-    state = { 'pos': 0, 'size': transcribe.getModelSize(), 'done': False,
-            'error': None, 'cancel': False }
+    return downloadModel(parent, transcribe.downloadModel, transcribe.getModelSize(),
+            _('Download speech recognition model'),
+            _("Couldn't download the speech recognition model, check your internet connection"))
+
+def downloadModel(parent, download, size, title, failure):
+    ''' Run `download` (transcribe.downloadModel or translate.downloadModel)
+    with a progress window. '''
+    state = { 'pos': 0, 'size': size, 'done': False, 'error': None, 'cancel': False }
 
     def onProgress(pos, size):
         state['pos'], state['size'] = pos, size
 
     def run():
         try:
-            state['done'] = transcribe.downloadModel(
-                    runCb=lambda: not state['cancel'], progressCb=onProgress)
+            state['done'] = download(runCb=lambda: not state['cancel'], progressCb=onProgress)
         except Exception as err:
             state['error'] = err
 
     thread = threading.Thread(target=run, name='ModelDownload', daemon=True)
     thread.start()
 
-    title = _('Download speech recognition model')
     style = wx.PD_APP_MODAL | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME
     dlg = wx.ProgressDialog(title, _('Downloading...') + ' ' * 40, maximum=1000,
             parent=parent, style=style)
@@ -118,8 +147,7 @@ def downloadSpeechModel(parent):
 
     thread.join()
     if state['error'] is not None:
-        raise Error(_("Couldn't download the speech recognition model, "
-                "check your internet connection")).add('details', str(state['error']))
+        raise Error(failure).add('details', str(state['error']))
     return state['done']
 
 def updateAssetList(parent):
