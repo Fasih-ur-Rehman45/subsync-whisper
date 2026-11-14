@@ -1,7 +1,9 @@
 import gizmo
 from subsync import subtitle
 from subsync.synchro import pipeline, dictionary, encdetect, wordsdump, controller
-from subsync.synchro import transcribe
+from subsync.synchro import transcribe, translate, route
+from subsync.data import languages
+import os
 from subsync.translations import _
 from subsync.error import Error
 import threading
@@ -40,6 +42,13 @@ class Synchronizer(object):
         # offset of every subtitle line, when synchronized piecewise
         self.piecewiseOffsets = None
 
+        # matching method for this language pair, see route.py
+        self.route = None
+        # subtitles machine-translated to English for matching (route.PIVOT):
+        # pipeline of their words, and English text by line start (ms)
+        self.subWordsPipeline = None
+        self.matchTexts = None
+
         self.correlator = None
         self.translator = None
         self.subPipeline = None
@@ -64,6 +73,7 @@ class Synchronizer(object):
             self.correlator.connectStatsCallback(None)
 
         self.subPipeline = None
+        self.subWordsPipeline = None
         self.refPipelines = []
         self.pipelines = []
         self.translator = None
@@ -78,8 +88,62 @@ class Synchronizer(object):
     def init(self, options, runCb=None):
         try:
             self._initInternal(options, runCb)
-        except (gizmo.ErrorTerminated, transcribe.Terminated):
+        except (gizmo.ErrorTerminated, transcribe.Terminated, translate.Terminated):
             logger.info('initialization terminated')
+
+    def _leadTarget(self):
+        ''' How long before speech lines should start: subtitles of
+        English-language films do it later than of other films (see
+        transcribe.leadTarget). '''
+        english = self.ref.lang and self.ref.lang.lower() == 'eng'
+        return transcribe.leadTargetEnglish if english else transcribe.leadTarget
+
+    def _subRunning(self):
+        return any(p and p.isRunning() for p in (self.subPipeline, self.subWordsPipeline))
+
+    def _translateSubtitles(self, runCb=None):
+        ''' Machine-translate subtitles to English for matching (route.PIVOT).
+        Returns path of the English subtitles (same timing), or `None` when the
+        subtitles can't be read here (e.g. a stream inside a video file). '''
+        import pysubs2
+        try:
+            subs = pysubs2.load(self.sub.path, encoding=self.sub.enc or 'utf-8')
+        except Exception as err:
+            logger.warning('subtitles cannot be read for translation: %r', err)
+            return None
+
+        events = sorted((e for e in subs.events if not e.is_comment), key=lambda e: e.start)
+        texts = [ e.plaintext for e in events ]
+        src = route.code2(self.sub.lang)
+
+        def progress(done, total):
+            self.onInitProgress(_('Translating subtitles for matching: {} of {} lines')
+                    .format(done, total))
+
+        if translate.isModelInstalled() is False:
+            # normally downloaded before synchronization starts, after asking
+            self.onInitProgress(_('Downloading translation model (first use only)...'))
+            if not translate.downloadModel(runCb=runCb):
+                raise translate.Terminated()
+
+        logger.info('translating %i subtitle lines from %s to English for matching',
+                len(texts), src)
+        english = translate.getTranslation(texts, src, runCb=runCb, progressCb=progress)
+
+        self.matchTexts = {}
+        for event, text in zip(events, english):
+            self.matchTexts.setdefault(event.start, []).append(text)
+
+        path = os.path.splitext(translate.getCachePath(texts, src))[0] + '.srt'
+        transcribe.writeSrt(path, [ (e.start / 1000.0, e.end / 1000.0, text or '...')
+            for e, text in zip(events, english) ])
+        return path
+
+    def _matchText(self, start, text):
+        ''' Text a subtitle line (starting at `start` ms) is matched with. '''
+        if self.matchTexts is None:
+            return text
+        return ' '.join(self.matchTexts.get(start) or [ text ])
 
     def _createTranscriptPipeline(self, options, runCb=None):
         ''' There is no pocketsphinx model for some languages (e.g. Japanese),
@@ -91,14 +155,15 @@ class Synchronizer(object):
                 'package, install it with: pip install faster-whisper')
                 .format(self.ref.lang)).add('language', self.ref.lang)
 
-        # for English subtitles speech is translated to English by whisper,
-        # it works better than matching words through the dictionary
-        translate = transcribe.translates(self.ref.lang, self.sub.lang)
-        lang = 'eng' if translate else self.ref.lang
-        logger.info('transcribing %s audio from "%s" (translate: %s)',
-                self.ref.lang, self.ref.path, translate)
+        # speech is translated to English by whisper for English subtitles and
+        # for subtitles matched through English (see route.py), it works better
+        # than matching words through the dictionary
+        toEnglish = route.translatesSpeech(self.route, self.ref)
+        lang = route.transcriptLanguage(self.route, self.ref)
+        logger.info('transcribing %s audio from "%s" (route: %s, translate: %s)',
+                self.ref.lang, self.ref.path, self.route, toEnglish)
 
-        pipe = pipeline.TranscriptPipeline(self.ref, lang, translate, runCb=runCb)
+        pipe = pipeline.TranscriptPipeline(self.ref, lang, toEnglish, runCb=runCb)
         pipe.statusCb = lambda msg: self.onInitProgress(msg)
 
         # transcription is slow, it stops as soon as the result is confirmed;
@@ -106,6 +171,9 @@ class Synchronizer(object):
         # and only then the result is polished
         self.thorough = options.get('minEffort', 1.0) >= 1.0
         self.minWordLen = options.get('minWordLen', 5)
+        # transcript lines are compared with subtitles in the transcript
+        # language, in letter groups for languages written without spaces
+        self.ngrams = languages.get(lang).ngrams
         self.transcriptMismatches = 0
         pipe.isDoneCb = lambda chunks: self._isTranscriptEnough(pipe, chunks)
 
@@ -126,7 +194,7 @@ class Synchronizer(object):
         deadline = time.monotonic() + 60.0
         while pipe._isRunning() and self.correlator.isRunning() \
                 and time.monotonic() < deadline \
-                and (self.subPipeline.isRunning() or self.correlator.getProgress() < 1.0):
+                and (self._subRunning() or self.correlator.getProgress() < 1.0):
             time.sleep(0.05)
 
         with self.statsLock:
@@ -141,7 +209,7 @@ class Synchronizer(object):
             return False
 
         with self.subtitlesCollector.subtitlesLock:
-            subs = [ (e.start / 1000.0, e.end / 1000.0, e.text)
+            subs = [ (e.start / 1000.0, e.end / 1000.0, self._matchText(e.start, e.text))
                     for e in self.subtitlesCollector.getSubtitles().events ]
 
         res = transcribe.refineFormula([ s[:2] for s in subs ], speech,
@@ -155,7 +223,8 @@ class Synchronizer(object):
         # must agree on its own too (subtitles could be made for another cut)
         chunks = [ transcribe.readSrt(transcribe.getChunkPath(pipe.cacheDir, no))
                 for no in pipe.chunksDoneList ]
-        if not transcribe.checkChunks(subs, chunks, res[0], res[1], self.minWordLen):
+        if not transcribe.checkChunks(subs, chunks, res[0], res[1], self.minWordLen,
+                self.ngrams):
             logger.info('after %i transcript chunks: %.6fx%+.3f not confirmed by '
                     'transcribed chunks', chunksDone, res[0], res[1])
             return self._transcriptMismatch(subs, speech, chunks, res)
@@ -168,7 +237,7 @@ class Synchronizer(object):
 
         # lines start a moment before speech, like correct subtitles do
         shift = transcribe.leadShift([ (res[0] * s[0] + res[1], res[0] * s[1] + res[1])
-            for s in subs ], speech)
+            for s in subs ], speech, self._leadTarget())
         with self.statsLock:
             self.refinedFormula = gizmo.Line(res[0], res[1] + shift)
         logger.info('after %i transcript chunks: %s confirmed by speech, polished to %s',
@@ -194,10 +263,10 @@ class Synchronizer(object):
 
         if offsets and pieces > 1:
             mapped = [ (a * s[0] + o, a * s[1] + o, s[2]) for s, o in zip(subs, offsets) ]
-            if transcribe.checkChunks(mapped, chunks, 1.0, 0.0, self.minWordLen) \
+            if transcribe.checkChunks(mapped, chunks, 1.0, 0.0, self.minWordLen, self.ngrams) \
                     and transcribe.checkRegions([ m[:2] for m in mapped ], speech, 1.0, 0.0):
                 # lines start a moment before speech, like correct subtitles do
-                shift = transcribe.leadShift([ m[:2] for m in mapped ], speech)
+                shift = transcribe.leadShift([ m[:2] for m in mapped ], speech, self._leadTarget())
                 offsets = [ o + shift for o in offsets ]
                 # formula of the longest piece is the one shown
                 main = max(set(offsets), key=offsets.count)
@@ -228,20 +297,39 @@ class Synchronizer(object):
         self.refWordsSink = self.correlator.pushRefWord
         self.subtitlesCollector = subtitle.SubtitlesCollector()
 
+        self.route = route.getRoute(self.sub, self.ref)
+        englishPath = None
+        if self.route == route.PIVOT:
+            englishPath = self._translateSubtitles(runCb)
+            if englishPath is None:
+                self.route = route.DICTIONARY if transcribe.supports(self.ref.lang) else route.ORIGINAL
+        logger.info('matching route: %s', self.route)
+
+        # subtitles are read from the original file (they are what is saved);
+        # when translated for matching, words come from the English copy
         self.subPipeline = pipeline.createProducerPipeline(self.sub)
         self.subPipeline.connectEosCallback(self.onSubEos)
         self.subPipeline.connectErrorCallback(self.onSubError)
         self.subPipeline.addSubsListener(self.subtitlesCollector.addSubtitle)
         self.subPipeline.addSubsListener(self.correlator.pushSubtitle)
-        self.subPipeline.addWordsListener(self.correlator.pushSubWord)
+        if englishPath:
+            from subsync.synchro.input import SubFile
+            self.subWordsPipeline = pipeline.SubtitlePipeline(
+                    SubFile(path=englishPath, lang='eng', enc='UTF-8'), runCb)
+            self.subWordsPipeline.connectEosCallback(self.onSubEos)
+            self.subWordsPipeline.connectErrorCallback(self.onSubError)
+            self.subWordsPipeline.addWordsListener(self.correlator.pushSubWord)
+        else:
+            self.subPipeline.addWordsListener(self.correlator.pushSubWord)
 
         refLang = self.ref.lang
+        subLang = route.matchLanguage(self.route, self.sub)
         transcriptPipe = None
-        if self.ref.type == 'audio' and transcribe.supports(self.ref.lang):
+        if self.ref.type == 'audio' and self.route in route.WHISPER:
             transcriptPipe, refLang = self._createTranscriptPipeline(options, runCb)
 
-        if self.sub.lang and refLang and self.sub.lang != refLang:
-            self.dictionary = dictionary.loadDictionary(refLang, self.sub.lang, options['minWordLen'])
+        if subLang and refLang and subLang != refLang:
+            self.dictionary = dictionary.loadDictionary(refLang, subLang, options['minWordLen'])
             self.translator = gizmo.Translator(self.dictionary)
             self.translator.setMinWordsSim(options['minWordsSim'])
             self.translator.addWordsListener(self.correlator.pushRefWord)
@@ -257,7 +345,8 @@ class Synchronizer(object):
             p.connectErrorCallback(self.onRefError)
             p.addWordsListener(self.refWordsSink)
 
-        self.pipelines = [ self.subPipeline ] + self.refPipelines
+        subPipelines = [ p for p in (self.subPipeline, self.subWordsPipeline) if p ]
+        self.pipelines = subPipelines + self.refPipelines
 
         for p in self.pipelines:
             p.configure(
@@ -267,7 +356,7 @@ class Synchronizer(object):
         dumpSources = {
                 'sub':     [ self.subPipeline ],
                 'subPipe': [ self.subPipeline ],
-                'subRaw':  [ self.subPipeline.getRawWordsSource() ],
+                'subRaw':  [ (self.subWordsPipeline or self.subPipeline).getRawWordsSource() ],
                 'ref':     [ self.translator ] if self.translator else self.refPipelines,
                 'refPipe': self.refPipelines,
                 'refRaw':  [ p.getRawWordsSource() for p in self.refPipelines ],
@@ -358,7 +447,7 @@ class Synchronizer(object):
                 effort = (progress - begin) / (1.0 - begin)
 
         return controller.SyncStatus(
-                correlated  = correlated and self.subPipeline and not self.subPipeline.isRunning(),
+                correlated  = correlated and self.subPipeline and not self._subRunning(),
                 maxChange   = self.subtitlesCollector.getMaxSubtitleDiff(formula),
                 progress    = progress,
                 factor      = stats.factor,
@@ -379,7 +468,7 @@ class Synchronizer(object):
         logger.debug(stats)
         with self.statsLock:
             self.stats = stats
-            if self.effortBegin == None and stats.correlated and self.subPipeline and not self.subPipeline.isRunning():
+            if self.effortBegin == None and stats.correlated and self.subPipeline and not self._subRunning():
                 self.effortBegin = self.getProgress()
         self.onUpdate()
 

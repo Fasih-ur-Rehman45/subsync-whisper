@@ -31,6 +31,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 
 import logging
 logger = logging.getLogger(__name__)
@@ -124,10 +125,15 @@ piecewiseFineRange = 0.5    # each piece is then fine tuned this far
 # subtitles appear a moment before people start speaking. Synchronized lines
 # are moved so that their starts lead speech by leadTarget seconds (median of
 # lines that follow a pause and have one clear speech start within leadReach
-# seconds); measured on correct subtitles of 9 films: 0.16 - 0.31 s, median
-# 0.25 s. Not done when fewer than leadMinLines lines are measured, or when it
-# would move lines more than leadMaxShift seconds.
+# seconds). The habit differs between film traditions, measured on 26
+# subtitle files: subtitles of 9 Japanese films start 0.16 - 0.31 s before
+# speech (median 0.25 s), subtitles of 13 English-language films 0.13 - 0.35 s
+# (median 0.15 s; a few start after speech, down to -0.6 s). So the target
+# depends on the audio language: leadTargetEnglish for English audio. Not done
+# when fewer than leadMinLines lines are measured, or when it would move lines
+# more than leadMaxShift seconds.
 leadTarget = 0.25
+leadTargetEnglish = 0.15
 leadGap = 0.4
 leadReach = 1.0
 leadClear = 0.4
@@ -150,6 +156,14 @@ class NotInstalled(Exception):
 def supports(lang):
     """Check whether audio in this language (3-letter code) is handled here."""
     return bool(lang) and lang.lower() in languages
+
+
+def whisperCode(lang):
+    """Whisper language code of a 3-letter one. English has a pocketsphinx
+    model, but its speech goes through Whisper too when subtitles in another
+    language are matched through English (see route.py)."""
+    lang = lang.lower()
+    return languages.get(lang) or { 'eng': 'en' }.get(lang, lang)
 
 
 def isAvailable():
@@ -455,6 +469,12 @@ def timeLines(lines):
     return res
 
 
+# the last loaded model is kept, so language detection and transcription of
+# several files (batch mode) don't load it again every time
+_loaded = {}
+_loadedLock = threading.Lock()
+
+
 def loadModel(model=None):
     try:
         from faster_whisper import WhisperModel
@@ -464,14 +484,23 @@ def loadModel(model=None):
     model = model or defaultModel()
     device = os.environ.get('SUBSYNC_WHISPER_DEVICE') or 'cpu'
     compute = os.environ.get('SUBSYNC_WHISPER_COMPUTE') or 'int8'
-    logger.info('loading whisper model %s (%s, %s)', model, device, compute)
-    try:
-        return WhisperModel(model, device=device, compute_type=compute)
-    except Exception as err:
-        if isModelInstalled(model) is False:
-            raise DownloadFailed('could not download speech recognition model, '
-                    'check internet connection ({})'.format(err))
-        raise
+    key = (model, device, compute)
+
+    with _loadedLock:
+        if key in _loaded:
+            return _loaded[key]
+        _loaded.clear()
+
+        logger.info('loading whisper model %s (%s, %s)', model, device, compute)
+        try:
+            whisper = WhisperModel(model, device=device, compute_type=compute)
+        except Exception as err:
+            if isModelInstalled(model) is False:
+                raise DownloadFailed('could not download speech recognition model, '
+                        'check internet connection ({})'.format(err))
+            raise
+        _loaded[key] = whisper
+        return whisper
 
 
 # approximate download size of the models, in bytes
@@ -609,14 +638,16 @@ def transcribeRange(whisper, path, streamNo, start, end, lang, translate=False,
     # voice detection and no conditioning on previous text keeps whisper from
     # inventing lines during music or silence, which would spoil the timing;
     # greedy decoding (beam_size=1) is about twice as fast as the default beam
-    # search, worse wording does not matter for synchronization
+    # search, worse wording does not matter for synchronization; word
+    # timestamps are not needed either: without them a film syncs about 20%
+    # faster with the same accuracy (measured on 3 films, both orders)
     segments, _info = whisper.transcribe(audio,
             language=lang,
             task='translate' if translate else 'transcribe',
             beam_size=1,
             vad_filter=True,
             condition_on_previous_text=False,
-            word_timestamps=True)
+            word_timestamps=False)
 
     lines = []
     for segment in segments:
@@ -766,13 +797,24 @@ def refineFormula(subs, speech, a, b):
     return scale, b + shift * step
 
 
-def _words(text, minLen):
+def _words(text, minLen, ngrams=None):
+    """Words of a subtitle or transcript line, as a set.
+
+    Languages written without spaces (Japanese, Chinese) would give whole
+    phrases as words, which never match differently worded lines; for them
+    `ngrams` splits text to overlapping groups of that many letters, like
+    SubSync's own matching does (see `ngrams` in subsync/data/languages.py).
+    """
     import re
     text = re.sub(r'\{[^}]*\}|\\[Nnh]|<[^>]*>', ' ', text.lower())
-    return set(w for w in re.findall(r'[^\W\d_]+', text) if len(w) >= minLen)
+    tokens = re.findall(r'[^\W\d_]+', text)
+    if ngrams:
+        return set(token[i:i + ngrams] for token in tokens
+                for i in range(len(token) + 1 - ngrams))
+    return set(w for w in tokens if len(w) >= minLen)
 
 
-def checkChunks(subs, chunks, a, b, minWordLen=5):
+def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
     """Check that every transcribed chunk agrees with synchronization formula.
 
     Speech overlap (see `refineFormula`) looks at the whole file at once, so
@@ -787,6 +829,9 @@ def checkChunks(subs, chunks, a, b, minWordLen=5):
         Subtitle lines start, end and text (not synchronized).
     chunks: list of list of (float, float, str)
         Transcript lines of every transcribed chunk.
+    ngrams: int, optional
+        Match groups of this many letters instead of words, for languages
+        written without spaces (see `_words`).
 
     Returns
     -------
@@ -795,7 +840,7 @@ def checkChunks(subs, chunks, a, b, minWordLen=5):
     """
     import bisect
 
-    subWords = sorted((a * start + b, _words(text, minWordLen)) for start, _, text in subs)
+    subWords = sorted((a * start + b, _words(text, minWordLen, ngrams)) for start, _, text in subs)
     subTimes = [ x[0] for x in subWords ]
     agree, disagree = 0, 0
 
@@ -805,7 +850,7 @@ def checkChunks(subs, chunks, a, b, minWordLen=5):
 
         diffs = []
         for start, _, text in lines:
-            words = _words(text, minWordLen)
+            words = _words(text, minWordLen, ngrams)
             if not words:
                 continue
             lo = bisect.bisect_left(subTimes, start - checkWindow)
@@ -1126,9 +1171,9 @@ def measureLead(lines, speech):
     return median, len(leads)
 
 
-def leadShift(lines, speech):
-    """Shift (seconds) that makes synchronized subtitle lines start
-    `leadTarget` seconds before speech, as correct subtitles do.
+def leadShift(lines, speech, target=None):
+    """Shift (seconds) that makes synchronized subtitle lines start `target`
+    seconds before speech (default `leadTarget`), as correct subtitles do.
 
     Synchronization fits subtitle lines over speech, which leaves them a
     little late (about 0.1 s on average). Returns 0 when there is too little
@@ -1138,9 +1183,10 @@ def leadShift(lines, speech):
     if not res or res[1] < leadMinLines:
         logger.info('speech start lead: too few lines measured (%s)', res)
         return 0.0
-    shift = res[0] - leadTarget
+    target = leadTarget if target is None else target
+    shift = res[0] - target
     logger.info('speech start lead: lines start %.3f s before speech (%i lines), '
-            'shift %+.3f s', res[0], res[1], shift)
+            'target %.2f s, shift %+.3f s', res[0], res[1], target, shift)
     if abs(shift) > leadMaxShift:
         logger.info('speech start lead: shift too large, not applied')
         return 0.0
@@ -1388,7 +1434,7 @@ def _transcribeExternal(python, path, outDir, lang, streamNo=None, model=None,
 
 def getCacheDir(path, streamNo, lang, translate=False, model=None):
     """Directory where transcript chunks of this audio stream are cached."""
-    lang2 = languages.get(lang.lower(), lang.lower())
+    lang2 = whisperCode(lang)
     stat = os.stat(path)
     key = '|'.join(str(x) for x in (os.path.abspath(path), stat.st_size,
         stat.st_mtime_ns, streamNo, lang2, model or defaultModel(),
@@ -1415,7 +1461,7 @@ def getTranscriptChunks(path, streamNo, lang, translate=False, model=None,
     bool
         `True` if all chunks were transcribed, `False` if stopped by `chunkCb`.
     """
-    lang2 = languages.get(lang.lower(), lang.lower())
+    lang2 = whisperCode(lang)
     model = model or defaultModel()
     outDir = getCacheDir(path, streamNo, lang, translate, model)
     os.makedirs(outDir, exist_ok=True)
