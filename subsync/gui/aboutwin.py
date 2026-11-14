@@ -39,6 +39,8 @@ credits='''SubSync - Copyright (c) Michal Szymaniak - GPLv3 - https://github.com
 faster-whisper - Copyright (c) 2023 SYSTRAN - MIT license
 CTranslate2 - Copyright (c) the OpenNMT authors - MIT license
 Whisper model - Copyright (c) 2022 OpenAI - MIT license
+M2M100 translation model - Copyright (c) Meta Platforms - MIT license
+SentencePiece - Copyright (c) Google - Apache License 2.0
 Silero VAD - Copyright (c) Silero Team - MIT license
 ONNX Runtime - Copyright (c) Microsoft Corporation - MIT license
 PyAV - Copyright retained by original committers - BSD license
