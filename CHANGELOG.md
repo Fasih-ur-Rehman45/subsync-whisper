@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ## [Unreleased]
 
+### Fixed
+- **Japanese subtitles with Japanese audio** (and Chinese) could never be confirmed: the check of transcribed parts compared whole phrases, because these languages are written without spaces. It now compares short groups of letters, like the original SubSync's matching does.
+
+### Changed
+- **Timing matches the film's subtitle tradition.** Lines start 0.25 s before speech for films in other languages and 0.15 s for English-language films, the typical values measured on 26 subtitle files (9 Japanese films, 13 English films, 4 in other languages). Before, 0.25 s was used for every film.
+- **About 20% faster.** Whisper no longer works out the timing of every word, which SubSync never used. Measured on 3 films in both orders: 117 s instead of 146 s on average, with the same accuracy.
+- The speech model is loaded once and reused, so language detection and several files in batch mode don't load it again each time (it took about 7 s per load).
+- The README says plainly which stretches of a film are checked, and how each combination of subtitle and audio language is handled.
+
+### Added
+- **Any combination of subtitle and audio languages.** Whisper can only translate speech to English, so subtitles in other languages are now translated to English on your computer, just for matching; your subtitles are never changed. This also covers the reverse direction, English films with subtitles in another language. It needs a one-time download of a translation model (about 490 MB, MIT license), and SubSync asks first. Tested with Spanish and Polish subtitles on 3 Japanese films (all 100% within 0.2 s), and with real Portuguese and Bulgarian subtitles on an English film (100%).
+- Unit tests for the timing logic (speech polish, per-part and region checks, piece-by-piece sync, the start-of-speech correction), on synthetic films with known right answers. They run on every build.
+
 ## [0.19] - 2026-11-14
 
 ### Added

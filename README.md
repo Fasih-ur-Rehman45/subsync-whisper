@@ -40,7 +40,7 @@ Syncing the same film again is quick, because the transcript is kept in `%TEMP%\
 
 | Message | Meaning |
 |---|---|
-| **Subtitles synchronized** | Done. The timing was confirmed by the speech across the whole film. |
+| **Subtitles synchronized** | Done. The timing was confirmed by the transcribed parts, and by the speech in every stretch of the film with enough dialogue to judge. |
 | **Couldn't synchronize** | The timing couldn't be confirmed, so no file is saved rather than saving wrong timing. |
 | **Subtitles do not fit this video as a whole, they may be made for a different cut or release** | The subtitles are for another version of the film, and piece-by-piece sync couldn't confirm a result either. Try subtitles made for your release. |
 | **Couldn't download the speech recognition model, check your internet connection** | The first-time download failed. Connect and click Start again; it resumes where it stopped. |
@@ -74,7 +74,21 @@ On the first eight films, lines are on average 0.04 s from the correct timing. A
 
 ### How it works
 
-SubSync transcribes only a few 5-minute parts of the film, spread from start to end. It fits the timing to them, then checks that timing against the detected speech across the whole film. It stops as soon as the result is confirmed. That is why a 2-hour film takes minutes rather than the 15–30 minutes a full transcription would take. See [doc/assets.md](doc/assets.md) for details.
+SubSync transcribes only a few 5-minute parts of the film, spread from start to end. It fits the timing to them, then checks that timing against the speech detected in the whole film, stretch by stretch (about 15 minutes each). Stretches with too little dialogue to judge (fewer than 30 subtitle lines) aren't checked on their own. It stops as soon as the result is confirmed. That is why a 2-hour film takes minutes rather than the 15–30 minutes a full transcription would take. See [doc/assets.md](doc/assets.md) for details.
+
+### Which languages work how
+
+| Your subtitles and audio | What SubSync does | Tested |
+|---|---|---|
+| **English subtitles**, audio in Japanese or another language listed below | Whisper translates the speech to English and matches it with your subtitles | Japanese, 9 films |
+| **Subtitles in the same language as the audio**, e.g. Japanese subtitles with Japanese audio | Whisper writes down the speech in that language and matches it with your subtitles | Not yet |
+| **Any other combination**, e.g. Spanish subtitles with Japanese audio | Whisper translates the speech to English, and your subtitles are translated to English on your computer, only for matching (they are never changed) | Spanish and Polish on 3 Japanese films |
+| **English audio with subtitles in another language**, e.g. Japanese subtitles for an English film | Whisper writes down the English speech, and your subtitles are translated to English for matching | Real Portuguese, Bulgarian and French subtitles on 2 films |
+| **English audio with English subtitles**, and other languages the original SubSync supports with subtitles in the same language | The original SubSync method, unchanged | By the original project |
+
+Translation needs a second one-time download (about 490 MB) and adds about a minute per film the first time; the result is kept, so syncing the same subtitles again is quick.
+
+The audio language itself is detected with Whisper when the video doesn't say it. That was tested on 34 films in Japanese and English.
 
 ## Your privacy
 
@@ -82,11 +96,23 @@ Speech recognition runs on your computer. Your videos and subtitles are never up
 
 ## Known limits
 
-- Lines are timed to start a moment (about a quarter second) before people speak, a typical value measured on 9 films. If your subtitles were timed differently, for example showing each line after the speech starts, the result can differ from them by up to half a second. Adjust it in **Settings**, under **Output timing offset**.
+- Lines are timed to start a moment before people speak: 0.25 s for films in other languages and 0.15 s for English-language films, the typical values measured on 26 subtitle files. Some subtitles are timed differently, for example showing each line after the speech starts; the result then differs from them by up to a second. Adjust it in **Settings**, under **Output timing offset**.
 - Within a few lines of a cut, some lines may land on the wrong side.
 - Only Japanese has been tested so far. These audio languages use the same method but are untested: Albanian, Arabic, Belarusian, Bulgarian, Catalan, Croatian, Czech, Danish, Estonian, Faroese, Finnish, Galician, Hebrew, Hungarian, Icelandic, Indonesian, Korean, Latin, Latvian, Lithuanian, Malagasy, Malay, Maltese, Norwegian, Persian, Polish, Portuguese, Romanian, Serbian, Slovak, Slovenian, Swedish, Turkish, Ukrainian.
 - All other languages work as in the original SubSync.
 - Automatic updates are turned off. New versions appear on the [Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases) page.
+
+## Advanced settings
+
+These environment variables change how Whisper runs. Set them before starting SubSync.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `SUBSYNC_WHISPER_MODEL` | `small` | Whisper model size, or a folder with a converted model |
+| `SUBSYNC_WHISPER_DEVICE` | `cpu` | `cuda` uses an NVIDIA graphics card, if NVIDIA's cuBLAS and cuDNN libraries are installed (untested) |
+| `SUBSYNC_WHISPER_COMPUTE` | `int8` | Number format used for the model |
+
+Smaller models aren't faster here. `tiny` (75 MB) failed to sync all 4 films it was tested on, and `base` (145 MB) failed 1 of 4 and was slower than `small` on the rest, because SubSync needed more parts of the film before it could confirm the timing.
 
 ## Troubleshooting
 
@@ -109,6 +135,12 @@ Run `subsync-cmd.exe --help` for all options.
 ## Building from source
 
 Windows packages are built by GitHub Actions; see [.github/workflows/build-windows.yml](.github/workflows/build-windows.yml) for every step.
+
+The timing logic has unit tests on synthetic films with known right answers. They run on every build, or locally in a few seconds (needs Python with numpy):
+
+```
+python -m unittest discover -s tests -v
+```
 
 To release a version:
 1. In [CHANGELOG.md](CHANGELOG.md), rename **Unreleased** to the new version and date.
