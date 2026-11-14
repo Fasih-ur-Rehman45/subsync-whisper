@@ -1,4 +1,4 @@
-name: Windows build
+name: Build
 
 on:
   push:
@@ -146,14 +146,138 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-      - name: Publish release
+      # files for the release page, published by the release job below
+      - name: Release files
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir release
+          (cd dist && 7z a -tzip -mx=7 "../release/subsync-$TAG-windows-x64.zip" subsync > /dev/null)
+          cp "$PORTABLE" release/
+          ls -l release
+
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: release-windows
+          path: release/*
+          compression-level: 0
+
+  linux:
+    # the oldest supported Ubuntu: the build runs on it and newer Linux
+    # systems (glibc 2.35 or later)
+    runs-on: ubuntu-22.04
+    env:
+      POCKETSPHINX_REF: 588ab6371a1e1c94c10d4ad772b0c4732e1905e6
+      PREFIX: ${{ github.workspace }}/deps/install
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # FFmpeg 4.4 from Ubuntu: the engine's old channel layout API is there
+      - name: Install build tools and libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends autoconf automake libtool bison             pkg-config libavdevice-dev libavformat-dev libavfilter-dev libavcodec-dev             libswresample-dev libswscale-dev libavutil-dev             libgtk-3-0 libnotify4 libsdl2-2.0-0 libsm6 libxtst6
+
+      - name: Build sphinxbase and pocketsphinx
+        run: |
+          set -e
+          git clone --depth 1 https://github.com/cmusphinx/sphinxbase.git deps/sphinxbase
+          git clone https://github.com/cmusphinx/pocketsphinx.git deps/pocketsphinx
+          git -C deps/pocketsphinx checkout --quiet "$POCKETSPHINX_REF"
+          export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+          (cd deps/sphinxbase && ./autogen.sh --prefix="$PREFIX" --without-python && make -j"$(nproc)" && make install)
+          (cd deps/pocketsphinx && ./autogen.sh --prefix="$PREFIX" --without-python && make -j"$(nproc)" && make install)
+          ls "$PREFIX/lib"
+          echo "PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$PREFIX/lib" >> "$GITHUB_ENV"
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt "pysubs2>=1.6,<2" "faster-whisper==1.2.1" sentencepiece pyinstaller
+          # ready-made wxPython for Ubuntu 22.04 (building it takes 40 minutes)
+          pip install --only-binary wxPython -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-22.04/ wxPython
+
+      - name: Build engine
+        run: |
+          python setup.py build_py
+          python setup.py build_ext --inplace
+          ls -l gizmo*.so
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Smoke test
+        run: |
+          python -c "import gizmo; print('engine:', gizmo.__file__)"
+          python -c "import sys; sys.path.insert(0, 'subsync/synchro'); import transcribe; print('whisper in process:', transcribe._hasModule())"
+          python -c "import subsync.synchro.synchronizer, subsync.gui.mainwin; print('subsync modules: ok')"
+
+      - name: Package
+        run: |
+          pyinstaller --noconfirm linux.spec
+          cp LICENSE dist/subsync/
+          ls dist/subsync | head -40
+
+      - name: Test package
+        run: |
+          dist/subsync/subsync-cmd --version
+          dist/subsync/subsync --cli --version
+
+      - name: Archive
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            version="$GITHUB_REF_NAME"
+          else
+            version=$(python -c "from subsync.version import version_short; print(version_short)")
+          fi
+          mkdir release
+          tar czf "release/subsync-$version-linux-x86_64.tar.gz" -C dist subsync
+          ls -l release
+
+      - name: Test archive
+        run: |
+          mkdir unpack-test
+          tar xzf release/*.tar.gz -C unpack-test
+          unpack-test/subsync/subsync-cmd --version
+          rm -rf unpack-test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subsync-linux-x86_64
+          path: release/*
+          compression-level: 0
+          if-no-files-found: error
+
+  release:
+    # version tags publish both builds on one release page
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [ windows, linux ]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          pattern: '{release-windows,subsync-linux-x86_64}'
+          merge-multiple: true
+
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          name="subsync-$TAG-windows-x64.zip"
-          (cd dist && 7z a -tzip -mx=7 "../$name" subsync > /dev/null)
-          ls -l "$name"
-          gh release create "$TAG" "$PORTABLE" "$name" --title "SubSync $TAG" --notes-file release-notes.md
+          ls -l files
+          python3 .github/release_notes.py "$TAG" release-notes.md
+          gh release create "$TAG" files/* --title "SubSync $TAG" --notes-file release-notes.md
