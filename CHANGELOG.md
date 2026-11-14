@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - The About window credits the translation model (M2M100) and SentencePiece.
 
 ### Added
+- **Linux version.** A portable folder for 64-bit Linux (Ubuntu 22.04 or newer, Debian 12, Fedora 36 and similar): unpack the `.tar.gz` and run `./subsync/subsync`, nothing to install.
 - **Any combination of subtitle and audio languages.** Whisper can only translate speech to English, so subtitles in other languages are now translated to English on your computer, just for matching; your subtitles are never changed. This also covers the reverse direction, English films with subtitles in another language. It needs a one-time download of a translation model (about 490 MB, MIT license), and SubSync asks first. Tested with Spanish and Polish subtitles on 3 Japanese films (all 100% within 0.2 s), and with real Portuguese and Bulgarian subtitles on an English film (100%).
 - Unit tests for the timing logic (speech polish, per-part and region checks, piece-by-piece sync, the start-of-speech correction), on synthetic films with known right answers. They run on every build.
 

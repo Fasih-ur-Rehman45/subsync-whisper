@@ -10,7 +10,7 @@ This version adds **Japanese audio** and many more languages. The original SubSy
 
 ## Requirements
 
-- 64-bit Windows 10 or 11.
+- 64-bit Windows 10 or 11, or 64-bit Linux (from 0.20) with glibc 2.35 or newer: Ubuntu 22.04 or newer, Debian 12, Fedora 36, Linux Mint 21 and similar.
 - 8 GB of RAM. It uses about 1–1.6 GB while syncing.
 - About 1 GB of disk space: 410 MB for the app and 490 MB for the speech model, plus 490 MB for the translation model if your subtitles aren't in English.
 - Internet once, the first time a model is needed, to download it.
@@ -24,6 +24,15 @@ This version adds **Japanese audio** and many more languages. The original SubSy
 The same app is also available as a zip (`subsync-<version>-windows-x64.zip`). Unzip it anywhere and run `subsync.exe`.
 
 Windows may show *"Windows protected your PC"* the first time, because SubSync is new and not yet known to Windows. Click **More info**, then **Run anyway**.
+
+**Linux** (from 0.20): download `subsync-<version>-linux-x86_64.tar.gz`, unpack it anywhere and run the app:
+
+```
+tar xzf subsync-<version>-linux-x86_64.tar.gz
+./subsync/subsync
+```
+
+Nothing is installed; the `subsync` folder holds everything. `./subsync/subsync-cmd` is the command line version.
 
 ## Using it
 
@@ -136,7 +145,7 @@ Run `subsync-cmd.exe --help` for all options.
 
 ## Building from source
 
-Windows packages are built by GitHub Actions; see [.github/workflows/build-windows.yml](.github/workflows/build-windows.yml) for every step.
+Windows and Linux packages are built by GitHub Actions; see [.github/workflows/build.yml](.github/workflows/build.yml) for every step.
 
 The timing logic has unit tests on synthetic films with known right answers. They run on every build, or locally in a few seconds (needs Python with numpy):
 

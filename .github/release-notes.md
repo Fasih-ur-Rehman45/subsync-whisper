@@ -9,10 +9,10 @@ SubSync synchronizes subtitles to a video's audio. This version adds **Japanese 
 
 ## Get started
 
-1. Download **`subsync-{{VERSION}}-portable-amd64.exe`** below and run it to unpack SubSync, then run **`subsync.exe`** in the new `subsync` folder. (Or use the zip: unzip it and run `subsync.exe`.)
-2. Choose your subtitles (language **English**) and the video, then click **Start**. SubSync detects that the audio is Japanese.
+1. **Windows:** download **`subsync-{{VERSION}}-portable-amd64.exe`** below and run it to unpack SubSync, then run **`subsync.exe`** in the new `subsync` folder (or use the zip). **Linux:** download **`subsync-{{VERSION}}-linux-x86_64.tar.gz`**, unpack it and run **`./subsync/subsync`**.
+2. Choose your subtitles and the video, then click **Start**. SubSync detects the audio language.
 3. The first time, SubSync downloads its speech model (about 490 MB, once).
 
-Needs 64-bit Windows 10 or 11 and 8 GB of RAM. If Windows shows *"Windows protected your PC"*, click **More info**, then **Run anyway**.
+Needs 64-bit Windows 10 or 11, or 64-bit Linux (Ubuntu 22.04 or newer and similar), and 8 GB of RAM. If Windows shows *"Windows protected your PC"*, click **More info**, then **Run anyway**.
 
 **[Full guide](https://github.com/Fasih-ur-Rehman45/subsync-whisper#readme)**: using it, what the messages mean, test results, known limits and troubleshooting.
