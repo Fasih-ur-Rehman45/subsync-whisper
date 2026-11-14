@@ -64,12 +64,27 @@ def supports(lang):
     return bool(lang) and lang.lower() in languages and lang.lower() != 'en'
 
 
+importError = None
+
+
 def _hasModules():
+    global importError
     try:
         import ctranslate2, sentencepiece, huggingface_hub  # noqa: F401
         return True
-    except ImportError:
+    except ImportError as err:
+        importError = repr(err)
         return False
+
+
+def availability():
+    """How translation can be used here, for --version and bug reports."""
+    if _hasModules():
+        return 'available'
+    python = findPython()
+    if python:
+        return 'available through {}'.format(python)
+    return 'not available ({})'.format(importError)
 
 
 def findPython():

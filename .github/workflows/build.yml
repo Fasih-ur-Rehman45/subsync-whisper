@@ -105,10 +105,13 @@ jobs:
           Copy-Item LICENSE dist\subsync\
           Get-ChildItem dist\subsync | Select-Object -First 40 Name, Length
 
+      # the packaged app must load Whisper and translation itself
       - name: Test package
+        shell: bash
         run: |
-          dist\subsync\subsync-cmd.exe --version
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dist/subsync/subsync-cmd.exe --version | tee version.txt
+          grep -q 'speech recognition (Whisper): available$' version.txt
+          grep -q 'translation: available$' version.txt
 
       # self-extracting archive like the original SubSync's portable exe: it
       # asks where to unpack and creates a subsync folder with the app
@@ -231,10 +234,13 @@ jobs:
           # biggest parts of the package
           find dist/subsync -type f -exec du -k {} + | sort -rn | head -40
 
+      # the packaged app must load Whisper and translation itself
       - name: Test package
         run: |
-          dist/subsync/subsync-cmd --version
+          dist/subsync/subsync-cmd --version | tee version.txt
           dist/subsync/subsync --cli --version
+          grep -q 'speech recognition (Whisper): available$' version.txt
+          grep -q 'translation: available$' version.txt
 
       - name: Archive
         run: |

@@ -1336,12 +1336,29 @@ def findPython():
             return path
 
 
+# why faster-whisper can't be imported here, see `availability`
+importError = None
+
+
 def _hasModule():
+    global importError
     try:
-        import faster_whisper
+        import faster_whisper  # noqa: F401
         return True
-    except ImportError:
+    except ImportError as err:
+        importError = repr(err)
+        logger.debug('faster-whisper not in this process: %s', importError)
         return False
+
+
+def availability():
+    """How Whisper can be used here, for --version and bug reports."""
+    if _hasModule():
+        return 'available'
+    python = findPython()
+    if python:
+        return 'available through {}'.format(python)
+    return 'not available ({})'.format(importError)
 
 
 def _transcribeExternal(python, path, outDir, lang, streamNo=None, model=None,

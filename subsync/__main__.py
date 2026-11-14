@@ -29,6 +29,9 @@ def subsync(argv=None):
 
     if args.get('version'):
         print('subsync version {} on {}'.format(version()[0], sys.platform))
+        from subsync.synchro import transcribe, translate
+        print('speech recognition (Whisper): {}'.format(transcribe.availability()))
+        print('translation: {}'.format(translate.availability()))
         return 0
 
     if not args.get('cli'):
