@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - **About 20% faster.** Whisper no longer works out the timing of every word, which SubSync never used. Measured on 3 films in both orders: 117 s instead of 146 s on average, with the same accuracy.
 - The speech model is loaded once and reused, so language detection and several files in batch mode don't load it again each time (it took about 7 s per load).
 - The README says plainly which stretches of a film are checked, and how each combination of subtitle and audio language is handled.
+- The About window credits the translation model (M2M100) and SentencePiece.
 
 ### Added
 - **Any combination of subtitle and audio languages.** Whisper can only translate speech to English, so subtitles in other languages are now translated to English on your computer, just for matching; your subtitles are never changed. This also covers the reverse direction, English films with subtitles in another language. It needs a one-time download of a translation model (about 490 MB, MIT license), and SubSync asks first. Tested with Spanish and Polish subtitles on 3 Japanese films (all 100% within 0.2 s), and with real Portuguese and Bulgarian subtitles on an English film (100%).
