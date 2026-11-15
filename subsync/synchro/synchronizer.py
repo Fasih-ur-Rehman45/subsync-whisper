@@ -26,9 +26,11 @@ transcriptMaxMismatches = 3
 
 
 class Synchronizer(object):
-    def __init__(self, sub, ref):
+    def __init__(self, sub, ref, forceRoute=None):
         self.sub = sub
         self.ref = ref
+        # matching method chosen by the caller instead of route.getRoute
+        self.forceRoute = forceRoute
 
         self.onUpdate = lambda: None
         self.onError = lambda src, err: None
@@ -297,7 +299,7 @@ class Synchronizer(object):
         self.refWordsSink = self.correlator.pushRefWord
         self.subtitlesCollector = subtitle.SubtitlesCollector()
 
-        self.route = route.getRoute(self.sub, self.ref)
+        self.route = self.forceRoute or route.getRoute(self.sub, self.ref)
         englishPath = None
         if self.route == route.PIVOT:
             englishPath = self._translateSubtitles(runCb)

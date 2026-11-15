@@ -4,6 +4,7 @@ import time
 import threading
 from subsync.settings import settings
 from subsync.error import Error
+from subsync.translations import _
 
 import logging
 logger = logging.getLogger(__name__)
@@ -329,10 +330,59 @@ class SyncController(object):
             self._onFinish(self._terminated)
 
     def _runTask(self, task, timeout, interactive):
+        from . import route
+        self._onJobStart(task)
+        sync, status = self._attempt(task, timeout, interactive)
+
+        # when the original method found nothing, Whisper may (see route.py)
+        fallback = None
+        if sync and not self._terminated and not (status and status.correlated):
+            try:
+                fallback = route.fallbackRoute(sync.route, task.sub, task.ref)
+            except Exception as err:
+                logger.warning('%r', err, exc_info=True)
+        if fallback:
+            logger.info('result: %r', status)
+            logger.info('%s method found no synchronization, trying %s', sync.route, fallback)
+            sync.destroy()
+            self._onJobInitProgress(task, _('Trying speech recognition with Whisper...'))
+            sync, status = self._attempt(task, timeout, interactive, fallback)
+
+        try:
+            status = sync.getStatus()
+            logger.info('result: %r', status)
+            succeeded = not self._terminated and status and status.correlated
+            path = None
+
+            if not interactive and succeeded and task.out:
+                try:
+                    path = self.saveSynchronizedSubtitles(task=task)
+
+                except Exception as err:
+                    logger.warning('subtitle save failed: %r', err, exc_info=True)
+                    self._onError(task, 'core', err)
+                    succeeded = False
+
+            res = SyncJobResult(succeeded, self._terminated, path)
+            self._onJobEnd(task, status, res)
+
+        except Exception as err:
+            logger.warning('%r', err, exc_info=True)
+            self._onError(task, 'core', err)
+
+        finally:
+            if sync:
+                sync.destroy()
+            logger.info('task finished %r', task)
+
+    def _attempt(self, task, timeout, interactive, forceRoute=None):
+        ''' Run synchronizer for the task until it is done (or effort is
+        enough), with `forceRoute` matching method (see route.py) when set.
+        Returns stopped synchronizer and its last status. '''
+        sync, status = None, None
         try:
             from .synchronizer import Synchronizer
-            self._onJobStart(task)
-            self._sync = sync = Synchronizer(task.sub, task.ref)
+            self._sync = sync = Synchronizer(task.sub, task.ref, forceRoute)
             sync.onUpdate = self._semaphore.release
             sync.onError = lambda src, err: self._onError(task, src, err)
             sync.onInitProgress = lambda msg: self._onJobInitProgress(task, msg)
@@ -363,29 +413,11 @@ class SyncController(object):
             logger.warning('%r', err, exc_info=True)
             self._onError(task, 'core', err)
 
-        try:
-            sync.stop(force=True)
-            status = sync.getStatus()
-            logger.info('result: %r', status)
-            succeeded = not self._terminated and status and status.correlated
-            path = None
-
-            if not interactive and succeeded and task.out:
-                try:
-                    path = self.saveSynchronizedSubtitles(task=task)
-
-                except Exception as err:
-                    logger.warning('subtitle save failed: %r', err, exc_info=True)
-                    self._onError(task, 'core', err)
-                    succeeded = False
-
-            res = SyncJobResult(succeeded, self._terminated, path)
-            self._onJobEnd(task, status, res)
-
-        except Exception as err:
-            logger.warning('%r', err, exc_info=True)
-            self._onError(task, 'core', err)
-
-        finally:
-            sync.destroy()
-            logger.info('task finished %r', task)
+        if sync:
+            try:
+                sync.stop(force=True)
+                status = sync.getStatus()
+            except Exception as err:
+                logger.warning('%r', err, exc_info=True)
+                self._onError(task, 'core', err)
+        return sync, status

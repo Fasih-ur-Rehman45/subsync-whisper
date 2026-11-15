@@ -49,6 +49,27 @@ class RouteTest(unittest.TestCase):
         self.assertEqual(self.route('eng', 'jpn', refType='subtitle/text'), route.ORIGINAL)
         self.assertEqual(self.route('eng', None), route.ORIGINAL)
 
+    def fallback(self, sub, ref, method=None, refType='audio'):
+        return route.fallbackRoute(method or route.ORIGINAL,
+                Stream(sub, 'subtitle/text'), Stream(ref, refType))
+
+    def test_whisper_after_original_finds_nothing(self):
+        if not route.transcribe.isAvailable() or route.transcribe.isModelInstalled() is False:
+            self.skipTest('Whisper model not available')
+        self.assertEqual(self.fallback('eng', 'eng'), route.SAME)
+        self.assertEqual(self.fallback(None, 'eng'), route.SAME)
+        ref, sub = Stream('eng'), Stream('eng', 'subtitle/text')
+        self.assertEqual(route.transcriptLanguage(route.SAME, ref), 'eng')
+        self.assertEqual(route.matchLanguage(route.SAME, sub), 'eng')
+        self.assertFalse(route.translatesSpeech(route.SAME, ref), 'English speech is written down')
+
+    def test_no_whisper_fallback_elsewhere(self):
+        self.assertIsNone(self.fallback('eng', 'eng', method=route.ENGLISH))
+        self.assertIsNone(self.fallback('fre', 'fre'))
+        self.assertIsNone(self.fallback('eng', 'fre'))
+        self.assertIsNone(self.fallback('eng', 'eng', refType='subtitle/text'))
+        self.assertIsNone(self.fallback('eng', None))
+
     def test_languages_used(self):
         ref, sub = Stream('jpn'), Stream('spa', 'subtitle/text')
         self.assertEqual(route.matchLanguage(route.PIVOT, sub), 'eng')

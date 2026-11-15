@@ -7,19 +7,19 @@ frame-rate mismatch, 25 fps subtitles on a 23.976 fps film, plus 2.5 s), then
 SubSync syncs it to the film's English audio, without being told the audio
 language. The official timing is the answer key.
 
-    English subtitles   original SubSync method (pocketsphinx)
+    English subtitles   original SubSync method (pocketsphinx), which finds
+                        too few words in this film, then Whisper writes the
+                        English speech down (route SAME)
     other languages     translated to English for matching (route PIVOT)
 
 usage:
     python tests/e2e/tears_of_steel.py --app dist/subsync/subsync-cmd.exe --data DIR
-        [--work DIR] [--langs en,es,de,it,nl,ru] [--min-within 80] [--report-only en]
+        [--work DIR] [--langs en,es,de,it,nl,ru] [--min-within 80] [--report-only LANGS]
 
 DIR holds tears_of_steel_720p.mov and TOS-<lang>.srt (downloaded by --download).
 Writes a Markdown table to $GITHUB_STEP_SUMMARY when set. Exit code 1 when a
 language has fewer lines within 0.2 s than --min-within percent. Languages in
---report-only are shown but don't fail the test: English, because the original
-SubSync recognizer (pocketsphinx) finds too few words in this film, a known
-limit.
+--report-only are shown but don't fail the test.
 """
 
 import argparse
@@ -91,7 +91,7 @@ def main():
     parser.add_argument('--data', required=True, help='folder with the film and its subtitles')
     parser.add_argument('--work', default='e2e-work', help='folder for mistimed copies and results')
     parser.add_argument('--langs', default=','.join(LANGUAGES))
-    parser.add_argument('--report-only', default='en',
+    parser.add_argument('--report-only', default='',
             help='languages shown but not failing the test (known limits)')
     parser.add_argument('--min-within', type=float, default=80.0,
             help='fail when fewer lines are within 0.2 s (percent)')
@@ -113,8 +113,9 @@ def main():
         out = os.path.abspath(os.path.join(args.work, 'TOS-{}.synced.srt'.format(lang)))
         log = os.path.abspath(os.path.join(args.work, 'TOS-{}.log'.format(lang)))
         writeSrt(sub, mistimed)
-        if os.path.exists(out):
-            os.remove(out)
+        for path in (out, log):
+            if os.path.exists(path):
+                os.remove(path)
 
         cmd = args.app.split() + [ '--cli', '--loglevel=INFO', '--logfile=' + log, 'sync',
                 '--sub', sub, '--sub-lang=' + LANGUAGES[lang], '--ref', video,
@@ -124,7 +125,8 @@ def main():
         took = time.time() - start
 
         logText = open(log, encoding='utf-8', errors='replace').read() if os.path.exists(log) else ''
-        route = (re.findall(r'matching route: (\w+)', logText) or [ 'original' ])[0]
+        # methods tried, e.g. "original, then same" when Whisper took over
+        route = ', then '.join(re.findall(r'matching route: (\w+)', logText)) or 'original'
         if not os.path.exists(out):
             rows.append((lang, route, took, None))
             failed = failed or lang not in reportOnly

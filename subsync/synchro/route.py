@@ -58,6 +58,24 @@ def getRoute(sub, ref):
     return ORIGINAL
 
 
+def fallbackRoute(route, sub, ref):
+    """Method tried when `route` found no synchronization, or `None`.
+
+    English audio with English subtitles goes through the original method
+    (pocketsphinx), which may find nothing, e.g. on Tears of Steel; Whisper
+    then writes the English speech down (SAME), when its model is already
+    downloaded (nothing is downloaded without asking).
+    """
+    if route != ORIGINAL or not ref or ref.type != 'audio' or not ref.lang:
+        return None
+    subLang = sub.lang.lower() if sub and sub.lang else None
+    if ref.lang.lower() != 'eng' or subLang not in (None, 'eng'):
+        return None
+    if not transcribe.isAvailable() or transcribe.isModelInstalled() is False:
+        return None
+    return SAME
+
+
 def matchLanguage(route, sub):
     """Language subtitle words are matched in."""
     return 'eng' if route == PIVOT else (sub.lang if sub else None)
