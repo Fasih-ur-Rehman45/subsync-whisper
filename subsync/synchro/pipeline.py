@@ -1,5 +1,6 @@
 import gizmo
 from subsync.synchro import speech, transcribe
+from subsync.synchro.channels import ChannelsMap
 from subsync.data import languages
 from subsync.translations import _
 from subsync.error import Error
@@ -180,6 +181,22 @@ class SpeechPipeline(BasePipeline):
         return self.speechRec
 
 
+def listenedChannels(stream):
+    ''' Names of the audio channels transcription listens to, chosen like for
+    SpeechPipeline (by default the center channel, where dialogue is, when
+    there is one), or `None` for all channels. '''
+    try:
+        layout = stream.stream().audio.channelLayout
+    except Exception:
+        return None
+    if not layout:
+        return None
+    chosen = set(stream.channels.getLayoutMap(layout).channels)
+    if not chosen or chosen >= set(ChannelsMap.layoutToIds(layout)):
+        return None
+    return [ ChannelsMap.getChannelName(ch) for ch in sorted(chosen) ]
+
+
 class TranscriptPipeline(object):
     def __init__(self, stream, lang, translate=False, runCb=None):
         ''' Speech transcription pipeline, for languages without speech
@@ -211,7 +228,10 @@ class TranscriptPipeline(object):
         self.stopping = False
         self.finished = False
         # where transcript chunks and detected speech are kept
-        self.cacheDir = transcribe.getCacheDir(stream.path, stream.no, stream.lang, translate)
+        self.channels = listenedChannels(stream)
+        logger.info('transcribing channels: %s', ','.join(self.channels) if self.channels else 'all')
+        self.cacheDir = transcribe.getCacheDir(stream.path, stream.no, stream.lang,
+                translate, channels=self.channels)
         self.duration = 0.0
         self.position = 0.0
         self.chunksNo = 0
@@ -286,6 +306,7 @@ class TranscriptPipeline(object):
             self.finished = transcribe.getTranscriptChunks(
                     self.stream.path, self.stream.no, self.stream.lang,
                     translate=self.translate,
+                    channels=self.channels,
                     runCb=self._isRunning,
                     progressCb=self._onProgress,
                     chunkCb=self._onChunk,

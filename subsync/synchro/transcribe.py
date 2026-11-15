@@ -55,6 +55,12 @@ sampleRate = 16000
 # does not grow with the length of the movie and synchronization could stop
 # before the whole movie is transcribed
 chunkLength = 300.0
+# short videos are split to at least this many chunks (none shorter than
+# chunkMinLength seconds), as synchronization must be confirmed by at least
+# checkMinChunks chunks on their own (Tears of Steel, 12 minutes, was split
+# in 2 and its credits half had too few words)
+chunkMinCount = 4
+chunkMinLength = 120.0
 # chunks are cut in the quietest moment of this long window (seconds) around
 # their nominal border, to not split a sentence in the middle
 chunkCutWindow = 60.0
@@ -86,6 +92,17 @@ speechMinSilence = 0.3
 # polished with speech of the whole file (see refineFormula), searched this
 # close to it: speed (as a fraction) and offset (seconds)
 refineScaleRange = 4e-4
+# in short videos (subtitles spanning less than shortVideo seconds) matched
+# words span only a few minutes and pin the speed down less precisely (on
+# Tears of Steel, 10 minutes, they were 0.5% off), and speech overlap is flat
+# enough to confirm a wrong speed close to them: speed is searched this wide
+# instead, and accepted only as a frame rate conversion (see frameRates), set
+# exactly, since speech alone pins it to only ~0.03% in a short video
+shortVideo = 1800.0
+refineScaleWide = 0.02
+# frame rates subtitles are made for: speed differences between them are the
+# speeds accepted from the wide search (within refineScaleRange)
+frameRates = (24000 / 1001, 24.0, 25.0, 30000 / 1001, 30.0)
 refineOffsetRange = 3.0
 # polished result must be the best one in this much wider offset range too
 refineWideRange = 60.0
@@ -220,6 +237,49 @@ def _frames(container, stream, runCb):
     yield None
 
 
+class _Mixer(object):
+    """Resamples decoded frames to mono 16 kHz 16-bit samples, listening only
+    to `channels` (FFmpeg channel names, e.g. ['FC'], as SubSync's own speech
+    recognition does, see channels.py) or, when `None`, to all of them."""
+
+    def __init__(self, channels=None):
+        self.channels = list(channels) if channels else None
+        self.resampler = None
+        self.pick = None
+
+    def _open(self, frame):
+        import av
+        names = [ ch.name for ch in frame.layout.channels ]
+        pick = [ names.index(ch) for ch in self.channels or () if ch in names ]
+        if pick and len(pick) < len(names):
+            logger.info('listening to channels %s of %s', ','.join(names[i] for i in pick),
+                    ','.join(names))
+            self.pick = pick
+            self.resampler = av.AudioResampler(format='fltp', layout=frame.layout, rate=sampleRate)
+        else:
+            if self.channels and not pick:
+                logger.info('channels %s not in %s, listening to all',
+                        ','.join(self.channels), ','.join(names))
+            self.resampler = av.AudioResampler(format='s16', layout='mono', rate=sampleRate)
+
+    def resample(self, frame):
+        """List of int16 arrays; `None` frame flushes the resampler."""
+        import numpy as np
+        if self.resampler is None:
+            if frame is None:
+                return []
+            self._open(frame)
+        res = []
+        for out in self.resampler.resample(frame):
+            data = out.to_ndarray()
+            if self.pick is None:
+                res.append(data.reshape(-1))
+            else:
+                mono = data[self.pick].mean(axis=0) * 32768.0
+                res.append(np.clip(np.round(mono), -32768, 32767).astype(np.int16))
+        return res
+
+
 class _SpeechDetector(object):
     """Detects speech, with voice activity detector of faster-whisper, in
     audio pushed in pieces. Appends (start, end) times to `result`."""
@@ -254,12 +314,19 @@ class _SpeechDetector(object):
             self.pending, self.size = [], 0
 
 
-def planChunks(path, streamNo=None, runCb=None, length=None, speech=None):
+def chunkCount(duration, length=None):
+    """Number of chunks `duration` seconds of audio are split to."""
+    count = int(round(duration / (length or chunkLength)))
+    short = min(chunkMinCount, int(duration // chunkMinLength))
+    return max(count, short, 1)
+
+
+def planChunks(path, streamNo=None, runCb=None, length=None, speech=None, channels=None):
     """Split audio stream to chunks of about `length` seconds, cut in the
     quietest moments.
 
     When `speech` list is given, it is filled with (start, end) times of speech
-    detected in the whole stream.
+    detected in the whole stream. `channels` see `_Mixer`.
 
     Returns
     -------
@@ -276,10 +343,9 @@ def planChunks(path, streamNo=None, runCb=None, length=None, speech=None):
 
     with av.open(path) as container:
         stream = _openAudio(container, path, streamNo)
-        resampler = av.AudioResampler(format='s16', layout='mono', rate=sampleRate)
+        mixer = _Mixer(channels)
         for frame in _frames(container, stream, runCb):
-            for out in resampler.resample(frame):
-                data = out.to_ndarray().reshape(-1)
+            for data in mixer.resample(frame):
                 if detector:
                     detector.push(data)
                 data = data.astype(np.float32)
@@ -300,7 +366,7 @@ def planChunks(path, streamNo=None, runCb=None, length=None, speech=None):
 
     energy = np.concatenate(energy) if energy else np.zeros(0)
     pairs = energy[:-1] + energy[1:]    # 0.5 s windows
-    count = max(int(round(duration / length)), 1)
+    count = chunkCount(duration, length)
     half = chunkCutWindow / 2.0 / energyStep
 
     cuts = [ 0.0 ]
@@ -316,10 +382,10 @@ def planChunks(path, streamNo=None, runCb=None, length=None, speech=None):
     return list(zip(cuts[:-1], cuts[1:]))
 
 
-def decodeRange(path, streamNo=None, start=0.0, end=None, runCb=None):
+def decodeRange(path, streamNo=None, start=0.0, end=None, runCb=None, channels=None):
     """Decode audio between `start` and `end` seconds to mono 16 kHz float32
     numpy array. streamNo is 0-based stream index in the container, `None` for
-    the first audio stream."""
+    the first audio stream; `channels` see `_Mixer`."""
     import av
     import numpy as np
 
@@ -333,7 +399,7 @@ def decodeRange(path, streamNo=None, start=0.0, end=None, runCb=None):
             if seek:
                 # lands on the last packet before `start`
                 container.seek(int(start / stream.time_base), stream=stream)
-            resampler = av.AudioResampler(format='s16', layout='mono', rate=sampleRate)
+            mixer = _Mixer(channels)
 
             for frame in _frames(container, stream, runCb):
                 if pos is None and frame is not None:
@@ -347,8 +413,7 @@ def decodeRange(path, streamNo=None, start=0.0, end=None, runCb=None):
                             chunks.append(np.zeros(pos - first, dtype=np.int16))
                             got = pos - first
 
-                for out in resampler.resample(frame):
-                    data = out.to_ndarray().reshape(-1)
+                for data in mixer.resample(frame):
                     if pos < first:
                         skip = min(first - pos, len(data))
                         data, pos = data[skip:], pos + skip
@@ -625,7 +690,7 @@ def downloadModel(model=None, runCb=None, progressCb=None):
 
 
 def transcribeRange(whisper, path, streamNo, start, end, lang, translate=False,
-        runCb=None, progressCb=None):
+        runCb=None, progressCb=None, channels=None):
     """Transcribe audio between `start` and `end` seconds.
 
     Returns
@@ -633,7 +698,7 @@ def transcribeRange(whisper, path, streamNo, start, end, lang, translate=False,
     list of (float, float, str)
         Lines start time, end time and text, timed like subtitles.
     """
-    audio = decodeRange(path, streamNo, start, end, runCb)
+    audio = decodeRange(path, streamNo, start, end, runCb, channels)
 
     # voice detection and no conditioning on previous text keeps whisper from
     # inventing lines during music or silence, which would spoil the timing;
@@ -712,7 +777,13 @@ def _savePlan(outDir, chunks, speech=None):
     os.replace(path + '.part', path)
 
 
-def refineFormula(subs, speech, a, b):
+def isShort(subs):
+    """Subtitles of a short video (see shortVideo), (start, end, ...) times."""
+    starts = [ s[0] for s in subs ]
+    return bool(starts) and max(starts) - min(starts) < shortVideo
+
+
+def refineFormula(subs, speech, a, b, scaleRange=None):
     """Polish synchronization formula with speech of the whole file.
 
     Formula (synchronized time = a * subtitle time + b) found by matching words
@@ -728,6 +799,9 @@ def refineFormula(subs, speech, a, b):
         Subtitle lines start and end times (not synchronized), sorted.
     speech: list of (float, float)
         Speech start and end times, see `loadSpeech`.
+    scaleRange: float, optional
+        Speeds searched around `a` (default `refineScaleRange`, or
+        `refineScaleWide` for a short video).
 
     Returns
     -------
@@ -771,9 +845,11 @@ def refineFormula(subs, speech, a, b):
         return float(res[pos]), scale, pos - wide, float(res.max())
 
     # coarse to fine search of the speed
+    scaleRange = scaleRange or (refineScaleWide if isShort(subs) else refineScaleRange)
     top = None
-    width = refineScaleRange
-    for count in (10, 4, 4):
+    width = scaleRange
+    # the wide search refines more, to reach the same final step
+    for count in (10, 4, 4) if scaleRange <= refineScaleRange else (10, 4, 4, 4, 4):
         center = top[1] if top else a
         for no in range(-count, count + 1):
             res = best(center + no * width / count)
@@ -781,9 +857,20 @@ def refineFormula(subs, speech, a, b):
                 top = res
         width /= count
 
-    score, scale, shift, widest = top
     logger.info('speech overlap: best for %.6fx%+.3f, words gave %.6fx%+.3f',
-            scale, b + shift * step, a, b)
+            top[1], b + top[2] * step, a, b)
+
+    if scaleRange > refineScaleRange:
+        # far from the words' speed: only a frame rate conversion is believed
+        ratio = min(frameRatios(), key=lambda r: abs(r - top[1]))
+        if abs(ratio - top[1]) > refineScaleRange * ratio:
+            logger.info('speed %.6f is not a frame rate conversion, not confirmed', top[1])
+            return None
+        top = best(ratio)
+        logger.info('speed set to frame rate conversion %.6f, offset %+.3f',
+                ratio, b + top[2] * step)
+
+    score, scale, shift, widest = top
 
     if score <= 0.0:
         logger.info('subtitles do not overlap speech, not confirmed')
@@ -791,10 +878,18 @@ def refineFormula(subs, speech, a, b):
     if widest > score * 1.0001:
         logger.info('speech overlap is better far from this formula, not confirmed')
         return None
-    if abs(shift) >= near or abs(scale - a) >= refineScaleRange * 0.999:
-        logger.info('speech overlap is best at the edge of searched range, not confirmed')
+    if abs(shift) >= near:
+        logger.info('speech overlap is best at the edge of searched offsets, not confirmed')
+        return None
+    if abs(scale - a) >= scaleRange * 0.999:
+        logger.info('speech overlap is best at the edge of searched speeds, not confirmed')
         return None
     return scale, b + shift * step
+
+
+def frameRatios():
+    """Speeds of subtitles made for one of `frameRates` shown at another."""
+    return sorted(set(round(x / y, 9) for x in frameRates for y in frameRates))
 
 
 def _words(text, minLen, ngrams=None):
@@ -837,12 +932,15 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
     -------
     bool
         `True` when no chunk disagrees and at least `checkMinChunks` agree.
+        In a short video (see `isShort`), chunks with too few matches on
+        their own are judged together too.
     """
     import bisect
 
     subWords = sorted((a * start + b, _words(text, minWordLen, ngrams)) for start, _, text in subs)
     subTimes = [ x[0] for x in subWords ]
     agree, disagree = 0, 0
+    pool = [ 0, 0 ] if isShort(subs) else None
 
     for no, lines in enumerate(chunks):
         if len(lines) < checkMinLines:
@@ -888,6 +986,21 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
             verdict = 'too few matches'
         logger.info('chunk check: %i lines, %i matches agree, %i in another cluster: %s',
                 len(lines), near, other, verdict)
+
+        if pool is not None and verdict == 'too few matches':
+            pool[0] += near
+            pool[1] += other
+            if pool[0] >= checkMinMatches and pool[0] > pool[1]:
+                verdict = 'agree'
+                agree += 1
+            elif pool[1] >= checkMinMatches and pool[1] >= pool[0]:
+                verdict = 'DISAGREE'
+                disagree += 1
+            else:
+                continue
+            logger.info('chunk check: chunks with too few matches together: '
+                    '%i matches agree, %i in another cluster: %s', pool[0], pool[1], verdict)
+            pool = [ 0, 0 ]
 
     return disagree == 0 and agree >= checkMinChunks
 
@@ -1219,7 +1332,7 @@ def readSrt(path):
 
 def transcribeChunks(path, outDir, lang, streamNo=None, model=None,
         translate=False, order='spread', runCb=None, progressCb=None,
-        chunkCb=None, planCb=None, detectSpeech=True):
+        chunkCb=None, planCb=None, detectSpeech=True, channels=None):
     """Transcribe audio to SRT chunks `chunk-NNN.srt` in `outDir`.
 
     Chunks already present (e.g. from previous run) are not transcribed again.
@@ -1228,6 +1341,8 @@ def transcribeChunks(path, outDir, lang, streamNo=None, model=None,
     ----------
     lang: str
         Whisper language code, e.g. 'ja'.
+    channels: list of str, optional
+        Audio channels listened to (see `_Mixer`), all when `None`.
     order: str, optional
         'spread' (see `spreadOrder`) or 'sequential'.
     runCb: callable, optional
@@ -1250,10 +1365,17 @@ def transcribeChunks(path, outDir, lang, streamNo=None, model=None,
     """
     os.makedirs(outDir, exist_ok=True)
     chunks = loadPlan(outDir)
+    if chunks and len(chunks) < chunkCount(chunks[-1][1]):
+        # planned by an older version, which split short videos to fewer chunks
+        logger.info('chunk plan is outdated, planning again')
+        for no in range(len(chunks)):
+            if os.path.isfile(getChunkPath(outDir, no)):
+                os.remove(getChunkPath(outDir, no))
+        chunks = None
     if chunks is None or (detectSpeech and loadSpeech(outDir) is None):
         logger.info('splitting audio to chunks%s', ', detecting speech' if detectSpeech else '')
         speech = [] if detectSpeech else None
-        planned = planChunks(path, streamNo, runCb, speech=speech)
+        planned = planChunks(path, streamNo, runCb, speech=speech, channels=channels)
         if chunks is None:      # keep plan of chunks already transcribed
             chunks = planned
         _savePlan(outDir, chunks, speech)
@@ -1281,7 +1403,8 @@ def transcribeChunks(path, outDir, lang, streamNo=None, model=None,
             logger.info('transcribing chunk %i/%i, %s - %s', no + 1, len(chunks),
                     formatTime(start), formatTime(end))
             lines = transcribeRange(whisper, path, streamNo, start, end, lang,
-                    translate=translate, runCb=runCb, progressCb=chunkProgress)
+                    translate=translate, runCb=runCb, progressCb=chunkProgress,
+                    channels=channels)
             writeSrt(chunkPath, lines)
 
         done += end - start
@@ -1294,7 +1417,7 @@ def transcribeChunks(path, outDir, lang, streamNo=None, model=None,
 
 
 def transcribe(path, outPath, lang, streamNo=None, model=None, runCb=None,
-        progressCb=None, translate=False):
+        progressCb=None, translate=False, channels=None):
     """Transcribe audio from file `path` to single SRT file `outPath`.
 
     Returns
@@ -1305,7 +1428,7 @@ def transcribe(path, outPath, lang, streamNo=None, model=None, runCb=None,
     with tempfile.TemporaryDirectory(prefix='subsync-') as tmpDir:
         transcribeChunks(path, tmpDir, lang, streamNo=streamNo, model=model,
                 translate=translate, order='sequential', runCb=runCb,
-                progressCb=progressCb, detectSpeech=False)
+                progressCb=progressCb, detectSpeech=False, channels=channels)
         lines = []
         for no in range(len(loadPlan(tmpDir) or [])):
             lines += readSrt(getChunkPath(tmpDir, no))
@@ -1362,7 +1485,8 @@ def availability():
 
 
 def _transcribeExternal(python, path, outDir, lang, streamNo=None, model=None,
-        translate=False, runCb=None, progressCb=None, chunkCb=None, planCb=None):
+        translate=False, runCb=None, progressCb=None, chunkCb=None, planCb=None,
+        channels=None):
     """Run `transcribeChunks` in a separate Python process."""
     import subprocess
     import threading
@@ -1373,6 +1497,8 @@ def _transcribeExternal(python, path, outDir, lang, streamNo=None, model=None,
         cmd += [ '-m', model ]
     if streamNo is not None:
         cmd += [ '-s', str(streamNo + 1) ]
+    if channels:
+        cmd += [ '--channels', ','.join(channels) ]
     if translate:
         cmd += [ '--translate' ]
 
@@ -1449,20 +1575,23 @@ def _transcribeExternal(python, path, outDir, lang, streamNo=None, model=None,
     return True
 
 
-def getCacheDir(path, streamNo, lang, translate=False, model=None):
+def getCacheDir(path, streamNo, lang, translate=False, model=None, channels=None):
     """Directory where transcript chunks of this audio stream are cached."""
     lang2 = whisperCode(lang)
     stat = os.stat(path)
-    key = '|'.join(str(x) for x in (os.path.abspath(path), stat.st_size,
-        stat.st_mtime_ns, streamNo, lang2, model or defaultModel(),
-        'translate' if translate else '', chunkLength, cacheVersion))
+    items = [ os.path.abspath(path), stat.st_size, stat.st_mtime_ns, streamNo,
+        lang2, model or defaultModel(), 'translate' if translate else '',
+        chunkLength, cacheVersion ]
+    if channels:    # all channels keep the key they had before channels were chosen
+        items.append(','.join(channels))
+    key = '|'.join(str(x) for x in items)
     name = '{}.{}'.format(hashlib.sha1(key.encode('utf-8')).hexdigest()[:20],
             'en' if translate else lang2)
     return os.path.join(tempfile.gettempdir(), 'subsync-transcripts', name)
 
 
 def getTranscriptChunks(path, streamNo, lang, translate=False, model=None,
-        runCb=None, progressCb=None, chunkCb=None, planCb=None):
+        runCb=None, progressCb=None, chunkCb=None, planCb=None, channels=None):
     """Transcribe audio stream to cached SRT chunks, in this process or in
     separate Python (see `findPython`). See `transcribeChunks` for callbacks.
 
@@ -1472,6 +1601,8 @@ def getTranscriptChunks(path, streamNo, lang, translate=False, model=None,
         3-letter language code (see `supports`) or whisper language code.
     translate: bool, optional
         Get English translation of the speech instead of the transcript.
+    channels: list of str, optional
+        Audio channels listened to (see `_Mixer`), all when `None`.
 
     Returns
     -------
@@ -1480,12 +1611,12 @@ def getTranscriptChunks(path, streamNo, lang, translate=False, model=None,
     """
     lang2 = whisperCode(lang)
     model = model or defaultModel()
-    outDir = getCacheDir(path, streamNo, lang, translate, model)
+    outDir = getCacheDir(path, streamNo, lang, translate, model, channels)
     os.makedirs(outDir, exist_ok=True)
     logger.info('transcript cache: %s', outDir)
 
     kw = dict(streamNo=streamNo, model=model, translate=translate, runCb=runCb,
-            progressCb=progressCb, chunkCb=chunkCb, planCb=planCb)
+            progressCb=progressCb, chunkCb=chunkCb, planCb=planCb, channels=channels)
 
     if _hasModule():
         return transcribeChunks(path, outDir, lang2, order='spread', **kw)
@@ -1508,6 +1639,8 @@ def main(argv=None):
             help='spoken language, whisper code (default: ja)')
     parser.add_argument('-s', '--stream', type=int,
             help='1-based stream number (default: first audio stream)')
+    parser.add_argument('-c', '--channels',
+            help='audio channels to listen to, comma separated, e.g. FC (default: all)')
     parser.add_argument('-m', '--model', help='whisper model size or path '
             '(default: {})'.format(defaultModel()))
     parser.add_argument('-t', '--translate', action='store_true',
@@ -1522,6 +1655,8 @@ def main(argv=None):
             help='only print the spoken language (whisper code) and its probability')
     args = parser.parse_args(argv)
     streamNo = None if args.stream is None else args.stream - 1
+    channels = [ ch.strip().upper() for ch in args.channels.split(',') if ch.strip() ] \
+            if args.channels else None
 
     def report(*items):
         sys.stderr.write(' '.join(str(x) for x in items) + '\n')
@@ -1543,7 +1678,7 @@ def main(argv=None):
         if args.chunks_dir:
             transcribeChunks(args.input, args.chunks_dir, args.lang,
                     streamNo=streamNo, model=args.model, translate=args.translate,
-                    progressCb=progress,
+                    progressCb=progress, channels=channels,
                     planCb=lambda chunks: report('plan', len(chunks)),
                     chunkCb=lambda no, path: report('chunk', no))
             report('done')
@@ -1560,7 +1695,8 @@ def main(argv=None):
             return 1
 
         count = transcribe(args.input, output, args.lang, streamNo=streamNo,
-                model=args.model, progressCb=progress, translate=args.translate)
+                model=args.model, progressCb=progress, translate=args.translate,
+                channels=channels)
 
     except NotInstalled as err:
         print(err, file=sys.stderr)

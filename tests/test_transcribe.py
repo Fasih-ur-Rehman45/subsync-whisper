@@ -114,6 +114,50 @@ class RefineFormulaTest(FilmTest):
         for f, v in ((subs[0], video[0]), (subs[-1], video[-1])):
             self.assertAlmostEqual(a * f[0] + b, v[0], delta=0.03)
 
+    def test_short_video_speed_found_by_wider_search(self):
+        # a 10-minute video with subtitles made for 25 fps on a 23.976 fps
+        # video: matched words got the speed 0.5% wrong, right only in the
+        # middle; the usual narrow search can't reach the answer
+        speed = 25 / (24000 / 1001)
+        speech = makeSpeech(600.0, seed=3)
+        video = makeSubtitles(speech, lead=0.0, tail=0.0)
+        subs = times(mistime(video, speed, OFFSET))
+        a0 = speed + 0.005
+        b0 = speed * 300 + OFFSET - a0 * 300
+        self.assertIsNone(t.refineFormula(subs, speech, a0, b0, t.refineScaleRange))
+        res = t.refineFormula(subs, speech, a0, b0)
+        self.assertIsNotNone(res)
+        a, b = res
+        self.assertAlmostEqual(a, speed, places=6)
+        for f, v in ((subs[0], video[0]), (subs[-1], video[-1])):
+            self.assertAlmostEqual(a * f[0] + b, v[0], delta=0.02)
+
+    def test_long_film_speed_not_snapped(self):
+        # a film's own speech pins the speed precisely: a speed close to a
+        # frame rate conversion (0.03% off it) stays as it is
+        speed = 24 / 25 * 1.0003
+        video = makeSubtitles(self.speech, lead=0.0, tail=0.0)
+        subs = times(mistime(video, speed, OFFSET))
+        a, b = t.refineFormula(subs, self.speech, speed + 2e-4, OFFSET + 1.2)
+        self.assertAlmostEqual(a, speed, delta=2e-5)
+
+    def test_wider_search_refuses_other_speeds(self):
+        # in a short video only a frame rate conversion is believed (speech
+        # overlap is too flat to tell a speed close to the words' one)
+        speed = 1.0083
+        speech = makeSpeech(600.0, seed=3)
+        video = makeSubtitles(speech, lead=0.0, tail=0.0)
+        subs = times(mistime(video, speed, OFFSET))
+        a0 = speed + 0.005
+        b0 = speed * 300 + OFFSET - a0 * 300
+        self.assertIsNone(t.refineFormula(subs, speech, a0, b0))
+
+    def test_short_video_split_to_more_chunks(self):
+        self.assertEqual(t.chunkCount(7200.0), 24)
+        self.assertEqual(t.chunkCount(734.0), 4)
+        self.assertEqual(t.chunkCount(400.0), 3)
+        self.assertEqual(t.chunkCount(60.0), 1)
+
     def test_refuses_far_answer(self):
         # 10 s off: outside the searched range, speech must not confirm it
         res = t.refineFormula(times(self.file), self.speech, SPEED, OFFSET + 10.0)
@@ -148,6 +192,19 @@ class ChecksTest(FilmTest):
 
     def test_chunks_need_two_opinions(self):
         self.assertFalse(t.checkChunks(self.file, self.chunks[:1], SPEED, OFFSET))
+
+    def test_short_video_chunks_judged_together(self):
+        # 4 parts of a short video with only 2 recognizable lines each: too
+        # few on their own, enough together (in a long film, never pooled)
+        video = [ l for l in self.video if l[0] < 1200.0 ]
+        chunks = []
+        for pos in (0.1, 0.35, 0.6, 0.85):
+            first = int(pos * (len(video) - 12))
+            chunks.append([ (s + 0.3, e + 0.3, text if no < 2 else 'mumble')
+                for no, (s, e, text) in enumerate(video[first:first + 12]) ])
+        short = mistime(video, SPEED, OFFSET)
+        self.assertTrue(t.checkChunks(short, chunks, SPEED, OFFSET))
+        self.assertFalse(t.checkChunks(self.file, chunks, SPEED, OFFSET))
 
     def japanese(self):
         """Japanese subtitles, a different-cut copy, and transcribed parts
@@ -282,3 +339,74 @@ class CacheDirTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+try:
+    import av
+    import numpy as np
+except ImportError:
+    av = None
+
+
+@unittest.skipIf(av is None, 'PyAV not installed')
+class ChannelsTest(unittest.TestCase):
+    """Whisper listens only to the chosen channels, like SubSync's own speech
+    recognition does: dialogue in the center channel of 5.1 audio, music and
+    effects in the others."""
+
+    @classmethod
+    def setUpClass(cls):
+        rate, seconds = t.sampleRate, 6
+        rnd = np.random.default_rng(7)
+        n = rate * seconds
+        # "dialogue": 440 Hz bursts every other second, center channel only
+        tone = 0.3 * np.sin(2 * np.pi * 440 * np.arange(n) / rate)
+        cls.dialogue = tone * (np.arange(n) // rate % 2 == 0)
+        noise = 0.3 * rnd.standard_normal((6, n)).clip(-3, 3) / 3
+        noise[2] = cls.dialogue                 # FL FR FC LFE BL BR
+        cls.folder = tempfile.mkdtemp(prefix='subsync-test-')
+        cls.path = os.path.join(cls.folder, 'surround.wav')
+        with av.open(cls.path, 'w') as out:
+            stream = out.add_stream('pcm_s16le', rate=rate, layout='5.1')
+            frame = av.AudioFrame.from_ndarray(
+                    (noise * 32767).astype(np.int16).T.reshape(1, -1), format='s16', layout='5.1')
+            frame.sample_rate = rate
+            for packet in stream.encode(frame):
+                out.mux(packet)
+            for packet in stream.encode(None):
+                out.mux(packet)
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(cls.path)
+        os.rmdir(cls.folder)
+
+    def similarity(self, audio):
+        n = min(len(audio), len(self.dialogue))
+        a, b = audio[:n], self.dialogue[:n]
+        return float(np.dot(a, b) / np.sqrt(np.dot(a, a) * np.dot(b, b)))
+
+    def test_center_channel_only(self):
+        audio = t.decodeRange(self.path, channels=['FC'])
+        self.assertGreater(self.similarity(audio), 0.99)
+
+    def test_all_channels_by_default(self):
+        audio = t.decodeRange(self.path)
+        self.assertLess(self.similarity(audio), 0.9)
+
+    def test_missing_channel_means_all(self):
+        audio = t.decodeRange(self.path, channels=['SL'])
+        self.assertLess(self.similarity(audio), 0.9)
+
+    def test_part_of_the_audio(self):
+        audio = t.decodeRange(self.path, start=2.0, end=3.0, channels=['FC'])
+        self.assertEqual(len(audio), t.sampleRate)
+        n = t.sampleRate
+        a, b = audio, self.dialogue[2 * n:3 * n]
+        self.assertGreater(float(np.dot(a, b) / np.sqrt(np.dot(a, a) * np.dot(b, b))), 0.99)
+
+    def test_chunks_and_cache(self):
+        self.assertNotEqual(t.getCacheDir(self.path, None, 'jpn'),
+                t.getCacheDir(self.path, None, 'jpn', channels=['FC']))
+        chunks = t.planChunks(self.path, speech=[], channels=['FC'])
+        self.assertAlmostEqual(chunks[-1][1], 6.0, delta=0.01)

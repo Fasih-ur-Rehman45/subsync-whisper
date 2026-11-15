@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ### Fixed
 - **Japanese subtitles with Japanese audio** (and Chinese) could never be confirmed: the check of transcribed parts compared whole phrases, because these languages are written without spaces. It now compares short groups of letters, like the original SubSync's matching does.
+- **Short videos** (TV episodes, short films) with subtitles made for another frame rate, for example 25 fps subtitles on a 23.976 fps video, often failed or came out a little off: a few minutes of speech pin the speed down less precisely than a whole film. In videos under 30 minutes, the speed is now searched more widely and set exactly to the frame rate conversion, and the video is split into at least 4 parts, judged together when each has too few words. Tested with the official subtitles of Tears of Steel (12 minutes) in Spanish, German, Italian, Dutch and Russian: all lines within 0.2 s of the official timing, where before 3 of 5 failed. Films keep their previous behaviour; the 26 test cases on 9 Japanese films give the same results.
+- **Chosen audio channels are used by Whisper too.** Like the original method, it now listens by default only to the center channel of 5.1 audio, where the dialogue is, instead of all channels mixed with the music and effects, and follows the channels chosen in the settings or with `--ref-channels`.
 
 ### Changed
 - **Timing matches the film's subtitle tradition.** Lines start 0.25 s before speech for films in other languages and 0.15 s for English-language films, the typical values measured on 26 subtitle files (9 Japanese films, 13 English films, 4 in other languages). Before, 0.25 s was used for every film.
