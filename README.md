@@ -130,7 +130,7 @@ Speech recognition and translation run on your computer. Your videos and subtitl
 - Within a few lines of a cut, some lines may land on the wrong side.
 - Of the audio languages Whisper adds, only Japanese has been tested so far (and English, through translation). These use the same method but are untested: Albanian, Arabic, Belarusian, Bulgarian, Catalan, Croatian, Czech, Danish, Estonian, Faroese, Finnish, Galician, Hebrew, Hungarian, Icelandic, Indonesian, Korean, Latin, Latvian, Lithuanian, Malagasy, Malay, Maltese, Norwegian, Persian, Polish, Portuguese, Romanian, Serbian, Slovak, Slovenian, Swedish, Turkish, Ukrainian.
 - All other languages work as in the original SubSync, without the Whisper fallback English has.
-- English subtitles on an English film take longer when the original method can't sync them: it listens to the whole film first, then Whisper takes over and adds the usual Whisper time. Without the speech model downloaded, there's no fallback.
+- English subtitles on an English film take longer when the original method can't sync them: it listens to the whole film first, then Whisper takes over and adds the usual Whisper time. The command line downloads the speech model for this the first time (unless run with `--offline`); in the app window, the fallback is used only when the model is already downloaded, for example after syncing a film in another language.
 - In videos under 30 minutes, subtitles with a speed difference that isn't a frame-rate conversion aren't synced (no file is saved).
 - Automatic updates are turned off. New versions appear on the [Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases) page.
 

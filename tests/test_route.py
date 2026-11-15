@@ -63,6 +63,18 @@ class RouteTest(unittest.TestCase):
         self.assertEqual(route.matchLanguage(route.SAME, sub), 'eng')
         self.assertFalse(route.translatesSpeech(route.SAME, ref), 'English speech is written down')
 
+    def test_fallback_model_needed(self):
+        # the command line downloads Whisper's model when it may be needed
+        if not route.transcribe.isAvailable():
+            self.skipTest('Whisper not available')
+        has = lambda sub, ref, refType='audio': route.hasFallback(
+                Stream(sub, 'subtitle/text'), Stream(ref, refType))
+        self.assertTrue(has('eng', 'eng'))
+        self.assertTrue(has(None, 'eng'))
+        self.assertFalse(has('eng', 'jpn'), 'Whisper is used anyway')
+        self.assertFalse(has('fre', 'fre'))
+        self.assertFalse(has('eng', 'eng', refType='subtitle/text'))
+
     def test_no_whisper_fallback_elsewhere(self):
         self.assertIsNone(self.fallback('eng', 'eng', method=route.ENGLISH))
         self.assertIsNone(self.fallback('fre', 'fre'))

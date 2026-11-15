@@ -46,6 +46,11 @@ def needsSpeechModel(tasks):
     return any(route.getRoute(task.sub, task.ref) in route.WHISPER for task in tasks)
 
 
+def hasFallback(tasks):
+    """Whisper may be tried after the original method (see route.py)."""
+    return any(route.hasFallback(task.sub, task.ref) for task in tasks)
+
+
 def needsTranslationModel(tasks):
     return any(route.getRoute(task.sub, task.ref) == route.PIVOT for task in tasks)
 
@@ -115,6 +120,13 @@ class AssetsDownloader(AssetsVerifier):
         if needsSpeechModel(tasks) and transcribe.isModelInstalled() is False:
             if not self.downloadSpeechModel():
                 return False
+
+        elif hasFallback(tasks) and transcribe.isModelInstalled() is False:
+            # not needed when the original method syncs, so a failed
+            # download doesn't stop synchronization
+            pr.println(1, "[+] if the original method can't sync English subtitles, "
+                    'Whisper is tried, its model is needed')
+            self.downloadSpeechModel()
 
         if needsTranslationModel(tasks) and translate.isModelInstalled() is False:
             return self.downloadTranslationModel()

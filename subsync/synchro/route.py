@@ -66,14 +66,20 @@ def fallbackRoute(route, sub, ref):
     then writes the English speech down (SAME), when its model is already
     downloaded (nothing is downloaded without asking).
     """
-    if route != ORIGINAL or not ref or ref.type != 'audio' or not ref.lang:
+    if route != ORIGINAL or not hasFallback(sub, ref):
         return None
-    subLang = sub.lang.lower() if sub and sub.lang else None
-    if ref.lang.lower() != 'eng' or subLang not in (None, 'eng'):
-        return None
-    if not transcribe.isAvailable() or transcribe.isModelInstalled() is False:
+    if transcribe.isModelInstalled() is False:
         return None
     return SAME
+
+
+def hasFallback(sub, ref):
+    """Whisper could be tried when the original method finds nothing (see
+    `fallbackRoute`), its model aside: the command line downloads it then."""
+    if not ref or ref.type != 'audio' or not ref.lang or getRoute(sub, ref) != ORIGINAL:
+        return False
+    subLang = sub.lang.lower() if sub and sub.lang else None
+    return ref.lang.lower() == 'eng' and subLang in (None, 'eng') and transcribe.isAvailable()
 
 
 def matchLanguage(route, sub):
