@@ -122,7 +122,7 @@ The audio language itself is detected with Whisper when the video doesn't say it
 
 ## Your privacy
 
-Speech recognition and translation run on your computer. Your videos and subtitles are never uploaded. The only downloads are the speech and translation models, from `huggingface.co`, and, for languages handled by the original method, the original SubSync's speech models and dictionaries.
+Speech recognition and translation run on your computer. Your videos and subtitles are never uploaded. The only downloads are the speech and translation models, from `huggingface.co`, always the exact versions SubSync was tested with, and, for languages handled by the original method, the original SubSync's speech models and dictionaries.
 
 ## Known limits
 

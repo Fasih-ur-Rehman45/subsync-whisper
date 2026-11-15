@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 # int8 conversion of facebook/m2m100_418M for CTranslate2, MIT license
 modelRepo = 'jncraton/m2m100_418M-ct2-int8'
+# downloaded at the revision it was tested with: the repository belongs to a
+# third party, a change in it can't change results unnoticed
+modelRevision = '7c1b2620a4e58dacecbd8bf89cfd6da7eb9eb7b0'
 modelFiles = [ 'model.bin', 'config.json', 'sentencepiece.bpe.model',
         'shared_vocabulary.json', 'generation_config.json', 'README.md' ]
 modelSize = 491e6
@@ -108,7 +111,8 @@ def isAvailable():
 
 def _modelPath(localOnly):
     from huggingface_hub import snapshot_download
-    return snapshot_download(modelRepo, allow_patterns=modelFiles, local_files_only=localOnly)
+    return snapshot_download(modelRepo, revision=modelRevision,
+            allow_patterns=modelFiles, local_files_only=localOnly)
 
 
 def isModelInstalled():

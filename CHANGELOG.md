@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - The README says plainly which stretches of a film are checked, and how each combination of subtitle and audio language is handled.
 - The About window credits the translation model (M2M100) and SentencePiece.
 - Building from source: the declared versions match what is tested. pysubs2 is limited to versions below 2, Python 3.6 is the oldest supported (Whisper and translation need 3.9; releases use 3.12), and `pip install '.[whisper]'` installs translation too.
+- The speech and translation models are downloaded at the exact versions they were tested with, so a change in their Hugging Face repositories (the translation model's belongs to a third party) can't change results unnoticed. Models already downloaded stay valid.
 - The macOS packaging files were removed: they predate Whisper and were never built or tested by this version.
 
 ### Added
@@ -25,7 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - **Any combination of subtitle and audio languages.** Whisper can only translate speech to English, so subtitles in other languages are now translated to English on your computer, just for matching; your subtitles are never changed. This also covers the reverse direction, English films with subtitles in another language. It needs a one-time download of a translation model (about 490 MB, MIT license), and SubSync asks first. Tested with Spanish and Polish subtitles on 3 Japanese films (all 100% within 0.2 s), and with real Portuguese and Bulgarian subtitles on an English film (100%).
 - **Whisper fallback for English films with English subtitles.** These still go through the original SubSync method first; when it can't sync them, Whisper now writes down the English speech and matches it with the subtitles, instead of no file being saved. It needs the speech model already downloaded. Tears of Steel's English subtitles: the original method saved nothing, the fallback got all lines within 0.2 s.
 - **End-to-end test on a free film.** `tests/e2e/tears_of_steel.py` syncs the official subtitles of Tears of Steel (Blender Foundation, CC-BY) in 6 languages with the built app and scores every line against the official timing (lines are paired by their text, a missing line counts as wrong); anyone can rerun it. All 6 languages: all lines within 0.2 s. It runs on both the Windows and the Linux package before every release, which is published only when it passes.
-- Unit tests for the timing logic (speech polish, per-part and region checks, piece-by-piece sync, the start-of-speech correction), on synthetic films with known right answers. They run on every build.
+- Unit tests for the timing logic (speech polish, per-part and region checks, piece-by-piece sync, the start-of-speech correction), on synthetic films with known right answers. They run on every build, and also check that faster-whisper still has the parts of it SubSync relies on.
 
 ## [0.19] - 2026-11-14
 

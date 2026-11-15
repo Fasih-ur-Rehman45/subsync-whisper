@@ -410,3 +410,39 @@ class ChannelsTest(unittest.TestCase):
                 t.getCacheDir(self.path, None, 'jpn', channels=['FC']))
         chunks = t.planChunks(self.path, speech=[], channels=['FC'])
         self.assertAlmostEqual(chunks[-1][1], 6.0, delta=0.01)
+
+
+try:
+    import faster_whisper
+except ImportError:
+    faster_whisper = None
+
+
+@unittest.skipIf(faster_whisper is None, 'faster-whisper not installed')
+class FasterWhisperTest(unittest.TestCase):
+    """transcribe.py uses some of faster-whisper's internals; a new version of
+    it must still have them, or model download and speech detection break."""
+
+    def parameters(self, func):
+        import inspect
+        return inspect.signature(func).parameters
+
+    def test_model_download(self):
+        from faster_whisper.utils import _MODELS, download_model
+        self.assertIn(t.defaultModel(), _MODELS)
+        for name in ('revision', 'local_files_only'):
+            self.assertIn(name, self.parameters(download_model))
+        self.assertIn('revision', self.parameters(faster_whisper.WhisperModel.__init__))
+
+    def test_speech_detection(self):
+        from faster_whisper.vad import VadOptions, get_speech_timestamps  # noqa: F401
+        VadOptions(min_silence_duration_ms=300, speech_pad_ms=0)
+
+    def test_transcription_options(self):
+        params = self.parameters(faster_whisper.WhisperModel.transcribe)
+        for name in ('language', 'task', 'beam_size', 'vad_filter',
+                'condition_on_previous_text', 'word_timestamps'):
+            self.assertIn(name, params)
+        params = self.parameters(faster_whisper.WhisperModel.detect_language)
+        for name in ('vad_filter', 'language_detection_segments'):
+            self.assertIn(name, params)

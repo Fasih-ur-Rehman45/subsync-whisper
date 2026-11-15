@@ -558,7 +558,8 @@ def loadModel(model=None):
 
         logger.info('loading whisper model %s (%s, %s)', model, device, compute)
         try:
-            whisper = WhisperModel(model, device=device, compute_type=compute)
+            whisper = WhisperModel(model, device=device, compute_type=compute,
+                    revision=modelRevision(model))
         except Exception as err:
             if isModelInstalled(model) is False:
                 raise DownloadFailed('could not download speech recognition model, '
@@ -566,6 +567,17 @@ def loadModel(model=None):
             raise
         _loaded[key] = whisper
         return whisper
+
+
+# the default model is downloaded at the revision it was tested with, so a
+# change in its Hugging Face repository can't change results unnoticed
+modelRevisions = {
+        'small': '536b0662742c02347bc0e980a01041f333bce120',
+        }
+
+
+def modelRevision(model):
+    return modelRevisions.get(model)
 
 
 # approximate download size of the models, in bytes
@@ -602,7 +614,7 @@ def isModelInstalled(model=None):
         return None
     try:
         from faster_whisper.utils import download_model
-        download_model(model, local_files_only=True)
+        download_model(model, local_files_only=True, revision=modelRevision(model))
         return True
     except Exception:
         return False
@@ -664,7 +676,7 @@ def downloadModel(model=None, runCb=None, progressCb=None):
             try:
                 from faster_whisper.utils import download_model
                 logger.info('downloading whisper model %s', model)
-                download_model(model)
+                download_model(model, revision=modelRevision(model))
                 logger.info('whisper model %s downloaded', model)
             except Exception as err:
                 logger.warning('whisper model download failed: %r', err, exc_info=True)
