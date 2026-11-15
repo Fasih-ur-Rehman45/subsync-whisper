@@ -2,7 +2,7 @@
 
 SubSync fixes subtitles that are out of sync with a video. It listens to the video's audio and moves the subtitles to where the lines are actually spoken.
 
-This version adds **Japanese audio** and many more languages. The original SubSync has no speech model for Japanese, so anime and other Japanese films couldn't be synchronized. Here, speech is recognized with the Whisper speech recognition model and translated to English, so **English subtitles can be synchronized to Japanese films**. From version 0.20, **subtitles in any language** work too, including foreign subtitles for English films. Everything runs on your own computer, without a graphics card.
+This version adds **Japanese audio** and many more languages. The original SubSync has no speech model for Japanese, so anime and other Japanese films couldn't be synchronized. Here, speech is recognized with the Whisper speech recognition model and translated to English, so **English subtitles can be synchronized to Japanese films**. From version 0.20, **subtitles in other languages** work too (any language SubSync lists), including foreign subtitles for English films. Everything runs on your own computer, without a graphics card.
 
 **[⬇ Download the latest version](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/latest)** · [What's changed](CHANGELOG.md)
 
@@ -110,7 +110,7 @@ On 5.1 audio, Whisper listens only to the center channel, where the dialogue is,
 | Your subtitles and audio | What SubSync does | Tested |
 |---|---|---|
 | **English subtitles**, audio in Japanese or another language listed below | Whisper translates the speech to English and matches it with your subtitles | Japanese, 9 films |
-| **Subtitles in the same language as the audio**, e.g. Japanese subtitles with Japanese audio | Whisper writes down the speech in that language and matches it with your subtitles | Not yet |
+| **Subtitles in the same language as the audio**, e.g. Japanese subtitles with Japanese audio | Whisper writes down the speech in that language and matches it with your subtitles | 1 Japanese film (97 minutes) whose subtitles were already correct: confirmed after 2 of 20 parts, every line kept within 0.08 s |
 | **Subtitles in another language**, audio in Japanese or another language listed below (from 0.20), e.g. Spanish subtitles with Japanese audio | Whisper translates the speech to English, and your subtitles are translated to English on your computer, only for matching (they are never changed) | Spanish and Polish on 3 Japanese films |
 | **English audio with subtitles in another language** (from 0.20), e.g. Japanese subtitles for an English film | Whisper writes down the English speech, and your subtitles are translated to English for matching | Real Portuguese, Bulgarian and French subtitles on 2 films |
 | **English audio with English subtitles** | The original SubSync method first. If it can't sync them, Whisper writes down the English speech and matches it with your subtitles (from 0.20, when the speech model is already downloaded) | Tears of Steel: the original method saved nothing, Whisper got all lines within 0.2 s |
