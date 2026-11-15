@@ -347,7 +347,7 @@ setup(
         url = 'https://github.com/sc0ty/subsync',
         description = 'Subtitle Speech Synchronizer',
         license='GPLv3',
-        python_requires = '>=3.5',
+        python_requires = '>=3.6',
         packages = [
             'subsync',
             'subsync.synchro',
@@ -365,7 +365,7 @@ setup(
             ],
         install_requires = [
             'certifi',
-            'pysubs2>=0.2.4',
+            'pysubs2>=0.2.4,<2',
             'pycryptodome>=3.9;platform_system!="Darwin"',
             'cryptography>=2.8;platform_system=="Darwin"',
             'PyYAML',
@@ -374,7 +374,7 @@ setup(
             ],
         extras_require = {
             'GUI': [ 'wxPython>=4.0' ],
-            'whisper': [ 'faster-whisper>=1.0' ],
+            'whisper': [ 'faster-whisper>=1.2.1,<2', 'sentencepiece' ],
             },
         scripts = ['bin/subsync'],
         cmdclass = {

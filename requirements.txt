@@ -1,6 +1,7 @@
 certifi
 cryptography>=2.8
-pysubs2>=0.2.4
+# tested with 0.2.4 (Python 3.6) and 1.6 or newer (Python 3.12, the releases)
+pysubs2>=0.2.4,<2
 PyYAML
 pybind11>=2.4
 requests>=2.0

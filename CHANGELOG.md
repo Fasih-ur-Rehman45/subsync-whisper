@@ -17,6 +17,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - The speech model is loaded once and reused, so language detection and several files in batch mode don't load it again each time (it took about 7 s per load).
 - The README says plainly which stretches of a film are checked, and how each combination of subtitle and audio language is handled.
 - The About window credits the translation model (M2M100) and SentencePiece.
+- Building from source: the declared versions match what is tested. pysubs2 is limited to versions below 2, Python 3.6 is the oldest supported (Whisper and translation need 3.9; releases use 3.12), and `pip install '.[whisper]'` installs translation too.
+- The macOS packaging files were removed: they predate Whisper and were never built or tested by this version.
 
 ### Added
 - **Linux version.** A portable folder for 64-bit Linux (Ubuntu 22.04 or newer, Debian 12, Fedora 36 and similar): unpack the `.tar.xz` and run `./subsync/subsync`, nothing to install.

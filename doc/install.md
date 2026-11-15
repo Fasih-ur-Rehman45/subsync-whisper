@@ -1,13 +1,13 @@
 # SubSync installation
-You could download release builds from [download page](https://sc0ty.github.io/subsync/en/download.html).
+You could download release builds from the [releases page](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases).
 
 ## Prerequisites
 - C++11 compatible compiler (or better C++14);
 - pybind11;
 - ffmpeg libraries (4.0 or newer);
 - sphinxbase and pocketsphinx;
-- Python interpreter (supporting Python 3.5 or newer);
-- Python modules listed in `requirements.txt` file;
+- Python 3.6 or newer; speech recognition with Whisper and translation need Python 3.9 or newer (releases are built with Python 3.12);
+- Python modules listed in `requirements.txt` file, and for Whisper and translation: `pip install '.[whisper]'`;
 
 ## Configuration
 SubSync expects to find configuration in `config.py` file. You could use default from `config.py.template` and modify it if needed:
@@ -16,7 +16,7 @@ cp subsync/config.py.template subsync/config.py
 ```
 
 ## POSIX platforms
-For POSIX compatibile platforms (e.g. Linux, MacOS), standard Python `setup.py` scripts are provided.
+For POSIX compatibile platforms (e.g. Linux), standard Python `setup.py` scripts are provided. This version is built and tested on Windows and Linux only; there is no macOS package.
 
 It is advised to build under Python virtual environment. To do that, go to project main directory and type:
 ```
@@ -52,18 +52,6 @@ pip install .
 Run SubSync from your virtual environment:
 ```
 ./bin/subsync
-```
-
-### MacOS installer
-MacOS binary distribution and installer are generated using pyinstaller utility.
-```
-pip install pyinstaller
-pyinstaller macos.spec
-```
-
-To create dmg installer, you need to have [create-dmg](https://github.com/andreyvit/create-dmg) in your path:
-```
-./tools/package-macos.sh
 ```
 
 ## Windows
