@@ -68,6 +68,21 @@ def readSrt(path):
     return sorted(lines)
 
 
+def compare(truth, synced):
+    """Start time errors (seconds) of synced lines against the official ones,
+    and the number of official lines missing from the result. SubSync changes
+    only timing, so lines are paired by their text, in order."""
+    import difflib
+    key = lambda text: ' '.join(text.split())
+    matcher = difflib.SequenceMatcher(None, [ key(t) for _, _, t in truth ],
+            [ key(t) for _, _, t in synced ], autojunk=False)
+    err = []
+    for block in matcher.get_matching_blocks():
+        for k in range(block.size):
+            err.append(synced[block.b + k][0] - truth[block.a + k][0])
+    return err, len(truth) - len(err)
+
+
 def writeSrt(path, lines):
     with open(path, 'w', encoding='utf-8', newline='\n') as fp:
         for no, (start, end, text) in enumerate(lines, 1):
@@ -117,7 +132,9 @@ def main():
             if os.path.exists(path):
                 os.remove(path)
 
-        cmd = args.app.split() + [ '--cli', '--loglevel=INFO', '--logfile=' + log, 'sync',
+        # a relative path to the app is not found on Windows, made absolute
+        app = [ os.path.abspath(x) if os.path.exists(x) else x for x in args.app.split() ]
+        cmd = app + [ '--cli', '--loglevel=INFO', '--logfile=' + log, 'sync',
                 '--sub', sub, '--sub-lang=' + LANGUAGES[lang], '--ref', video,
                 '--ref-stream-by-type=audio', '--out', out, '--overwrite' ]
         start = time.time()
@@ -132,22 +149,26 @@ def main():
             failed = failed or lang not in reportOnly
             continue
         synced = readSrt(out)
-        truth = truth[len(truth) - len(synced):]    # lines that fell before 0:00
-        err = [ y[0] - x[0] for x, y in zip(truth, synced) ]
-        within = 100 * sum(abs(e) <= 0.2 for e in err) / len(err)
-        rows.append((lang, route, took, (len(err), within, statistics.mean(err), max(map(abs, err)))))
+        err, missing = compare(truth, synced)
+        if not err:
+            err = [ float('inf') ]      # no line of the result is an official one
+        # a line missing from the result counts as wrong
+        within = 100 * sum(abs(e) <= 0.2 for e in err) / len(truth)
+        rows.append((lang, route, took, (len(truth), missing, within,
+            statistics.mean(map(abs, err)), statistics.mean(err), max(map(abs, err)))))
         failed = failed or (within < args.min_within and lang not in reportOnly)
 
-    table = [ '| Subtitles | Method | Time | Lines | Within 0.2 s | Average | Worst |',
-              '|---|---|---|---|---|---|---|' ]
+    table = [ '| Subtitles | Method | Time | Lines | Within 0.2 s | Average error | Bias | Worst |',
+              '|---|---|---|---|---|---|---|---|' ]
     for lang, route, took, res in rows:
+        name = lang + (' (known limit)' if lang in reportOnly else '')
         if res is None:
-            table.append('| {}{} | {} | {:.0f} s | no file saved | | | |'.format(
-                lang, ' (known limit)' if lang in reportOnly else '', route, took))
+            table.append('| {} | {} | {:.0f} s | no file saved | | | | |'.format(name, route, took))
         else:
-            n, within, avg, worst = res
-            table.append('| {}{} | {} | {:.0f} s | {} | {:.1f}% | {:+.3f} s | {:.2f} s |'.format(
-                lang, ' (known limit)' if lang in reportOnly else '', route, took, n, within, avg, worst))
+            n, missing, within, avg, bias, worst = res
+            lines = '{}{}'.format(n, ', {} missing'.format(missing) if missing else '')
+            table.append('| {} | {} | {:.0f} s | {} | {:.1f}% | {:.3f} s | {:+.3f} s | {:.2f} s |'.format(
+                name, route, took, lines, within, avg, bias, worst))
     report = '\n'.join([ '### Tears of Steel, end to end', '',
         'Official subtitles mistimed as 25 fps on the 23.976 fps film plus 2.5 s, '
         'synced by the packaged SubSync and scored against the official timing.', '' ] + table)

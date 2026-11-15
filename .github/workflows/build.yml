@@ -273,10 +273,86 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
+  # end-to-end test of each package on a free film (see tests/e2e): on version
+  # tags, before the release is published, and when started by hand
+  e2e-windows:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    needs: windows
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: subsync-windows-x64
+          path: app
+
+      # the film (372 MB) and the speech and translation models (980 MB)
+      - uses: actions/cache@v4
+        with:
+          path: |
+            tos
+            ~/.cache/huggingface
+          key: e2e-tears-of-steel-${{ runner.os }}-v1
+
+      - name: Tears of Steel
+        shell: bash
+        run: python tests/e2e/tears_of_steel.py --app app/subsync-cmd.exe --data tos --work e2e-work --download
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-windows
+          path: e2e-work
+
+  e2e-linux:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    needs: linux
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: subsync-linux-x86_64
+          path: download
+
+      - name: Unpack
+        run: |
+          mkdir app
+          tar xJf download/*.tar.xz -C app
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            tos
+            ~/.cache/huggingface
+          key: e2e-tears-of-steel-${{ runner.os }}-v1
+
+      - name: Tears of Steel
+        run: python tests/e2e/tears_of_steel.py --app app/subsync/subsync-cmd --data tos --work e2e-work --download
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-linux
+          path: e2e-work
+
   release:
-    # version tags publish both builds on one release page
+    # version tags publish both builds on one release page, after both pass
+    # the end-to-end test
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ windows, linux ]
+    needs: [ windows, linux, e2e-windows, e2e-linux ]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4

@@ -168,7 +168,7 @@ The timing logic has unit tests on synthetic films with known right answers. The
 python -m unittest discover -s tests -v
 ```
 
-The end-to-end test syncs the official subtitles of Tears of Steel with the built app and scores every line against the official timing. `--download` fetches the film (372 MB) and its subtitles from blender.org first:
+The end-to-end test syncs the official subtitles of Tears of Steel with the built app and scores every line against the official timing. It runs on both packages before every release, and a release is published only when it passes. `--download` fetches the film (372 MB) and its subtitles from blender.org first:
 
 ```
 python tests/e2e/tears_of_steel.py --app dist/subsync/subsync-cmd.exe --data tos --download
