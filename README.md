@@ -84,6 +84,14 @@ The tests use deliberately mistimed copies of correct subtitles, and compare Sub
 | Real Portuguese and Bulgarian subtitles on an English film | **2 of 2 with all lines within 0.2 s** |
 | Real French subtitles on an English film | Lines about 1 s early: all of this film's subtitle files, even the English one, show lines after the speech starts |
 
+**A short film** (from 0.20): the official English, Spanish, German, Italian, Dutch and Russian subtitles of [Tears of Steel](https://mango.blender.org) (a free 12-minute English film), mistimed as if made for 25 fps instead of 23.976 fps, plus 2.5 s:
+
+| Result | Languages |
+|---|---|
+| **All lines within 0.2 s** of the official timing, 0.18 s after it: the official files show lines 0.33 s before people speak, SubSync 0.15 s | 6 of 6 |
+
+Anyone can repeat this test, see [Building from source](#building-from-source).
+
 **Time,** on a laptop with an AMD Ryzen 9 5900HX processor and 8 GB of RAM, using no graphics card:
 - Most films: 1.5–2.5 minutes the first time, seconds when syncing the same film again.
 - Films with little dialogue: up to 6 minutes.
@@ -93,6 +101,10 @@ The tests use deliberately mistimed copies of correct subtitles, and compare Sub
 
 SubSync transcribes only a few 5-minute parts of the film, spread from start to end. It fits the timing to them, then checks that timing against the speech detected in the whole film, stretch by stretch (about 15 minutes each). Stretches with too little dialogue to judge (fewer than 30 subtitle lines) aren't checked on their own. It stops as soon as the result is confirmed. That is why a 2-hour film takes minutes rather than the 15–30 minutes a full transcription would take. See [doc/assets.md](doc/assets.md) for details.
 
+Videos under 30 minutes (TV episodes, short films) give less speech to measure the speed with, so they're split into at least 4 parts, and a speed difference is accepted only when it's a frame-rate conversion (between 23.976, 24, 25, 29.97 and 30 fps), which is then set exactly.
+
+On 5.1 audio, Whisper listens only to the center channel, where the dialogue is, like the original SubSync does. Other channels can be chosen in the window where you choose the audio stream, under **Audio channels**, or with `--ref-channels` on the command line.
+
 ### Which languages work how
 
 | Your subtitles and audio | What SubSync does | Tested |
@@ -101,7 +113,8 @@ SubSync transcribes only a few 5-minute parts of the film, spread from start to 
 | **Subtitles in the same language as the audio**, e.g. Japanese subtitles with Japanese audio | Whisper writes down the speech in that language and matches it with your subtitles | Not yet |
 | **Subtitles in another language**, audio in Japanese or another language listed below (from 0.20), e.g. Spanish subtitles with Japanese audio | Whisper translates the speech to English, and your subtitles are translated to English on your computer, only for matching (they are never changed) | Spanish and Polish on 3 Japanese films |
 | **English audio with subtitles in another language** (from 0.20), e.g. Japanese subtitles for an English film | Whisper writes down the English speech, and your subtitles are translated to English for matching | Real Portuguese, Bulgarian and French subtitles on 2 films |
-| **English audio with English subtitles**, and audio in the other languages the original SubSync supports (French, German and others) | The original SubSync method, unchanged, with its dictionaries for subtitles in another language | By the original project |
+| **English audio with English subtitles** | The original SubSync method first. If it can't sync them, Whisper writes down the English speech and matches it with your subtitles (from 0.20, when the speech model is already downloaded) | Tears of Steel: the original method saved nothing, Whisper got all lines within 0.2 s |
+| Audio in the other languages the original SubSync supports (French, German and others) | The original SubSync method, unchanged, with its dictionaries for subtitles in another language | By the original project |
 
 Translation needs a second one-time download (about 490 MB) and adds 1–2.5 minutes per film the first time; the result is kept, so syncing the same subtitles again is quick.
 
@@ -116,7 +129,9 @@ Speech recognition and translation run on your computer. Your videos and subtitl
 - Lines are timed to start a moment before people speak: 0.25 s for films in other languages and 0.15 s for English-language films, the typical values measured on 26 subtitle files. Some subtitles are timed differently, for example showing each line after the speech starts; the result then differs from them by up to a second. Adjust it in **Settings**, under **Output timing offset**.
 - Within a few lines of a cut, some lines may land on the wrong side.
 - Of the audio languages Whisper adds, only Japanese has been tested so far (and English, through translation). These use the same method but are untested: Albanian, Arabic, Belarusian, Bulgarian, Catalan, Croatian, Czech, Danish, Estonian, Faroese, Finnish, Galician, Hebrew, Hungarian, Icelandic, Indonesian, Korean, Latin, Latvian, Lithuanian, Malagasy, Malay, Maltese, Norwegian, Persian, Polish, Portuguese, Romanian, Serbian, Slovak, Slovenian, Swedish, Turkish, Ukrainian.
-- All other languages work as in the original SubSync.
+- All other languages work as in the original SubSync, without the Whisper fallback English has.
+- English subtitles on an English film take longer when the original method can't sync them: it listens to the whole film first, then Whisper takes over and adds the usual Whisper time. Without the speech model downloaded, there's no fallback.
+- In videos under 30 minutes, subtitles with a speed difference that isn't a frame-rate conversion aren't synced (no file is saved).
 - Automatic updates are turned off. New versions appear on the [Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases) page.
 
 ## Advanced settings
@@ -153,6 +168,12 @@ The timing logic has unit tests on synthetic films with known right answers. The
 python -m unittest discover -s tests -v
 ```
 
+The end-to-end test syncs the official subtitles of Tears of Steel with the built app and scores every line against the official timing. `--download` fetches the film (372 MB) and its subtitles from blender.org first:
+
+```
+python tests/e2e/tears_of_steel.py --app dist/subsync/subsync-cmd.exe --data tos --download
+```
+
 To release a version:
 1. In [CHANGELOG.md](CHANGELOG.md), rename **Unreleased** to the new version and date.
 2. Push a version tag such as `0.19`.
@@ -169,4 +190,5 @@ SubSync is free software under the [GNU General Public License v3](LICENSE).
 - Speech recognition for other languages: [CMU Sphinx](https://github.com/cmusphinx) (BSD).
 - Translation: Meta's [M2M100](https://huggingface.co/facebook/m2m100_418M) 418M model (MIT), in the [CTranslate2 conversion by jncraton](https://huggingface.co/jncraton/m2m100_418M-ct2-int8) (MIT), with [SentencePiece](https://github.com/google/sentencepiece) (Apache-2.0).
 - Audio and video: [FFmpeg](https://ffmpeg.org) 5.1.2, the [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) full shared build (GPL-3.0); source code at [ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz](https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz). Also [PyAV](https://github.com/PyAV-Org/PyAV) (BSD).
+- End-to-end test film: [Tears of Steel](https://mango.blender.org) by the Blender Foundation (CC-BY 3.0), downloaded by the test, not included.
 - Window: [wxPython](https://wxpython.org) (wxWindows Library Licence). Subtitles: [pysubs2](https://github.com/tkarabela/pysubs2) (MIT). Engine bindings: [pybind11](https://github.com/pybind/pybind11) (BSD).
