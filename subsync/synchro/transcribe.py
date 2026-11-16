@@ -1602,6 +1602,62 @@ def getCacheDir(path, streamNo, lang, translate=False, model=None, channels=None
     return os.path.join(tempfile.gettempdir(), 'subsync-transcripts', name)
 
 
+def planSpeech(path, outDir, streamNo=None, channels=None, runCb=None):
+    """Detect speech in the whole stream (and plan chunks) without
+    transcribing, kept in `outDir` like `transcribeChunks` keeps it."""
+    os.makedirs(outDir, exist_ok=True)
+    if loadSpeech(outDir) is None:
+        logger.info('detecting speech')
+        speech = []
+        planned = planChunks(path, streamNo, runCb, speech=speech, channels=channels)
+        _savePlan(outDir, loadPlan(outDir) or planned, speech)
+    return loadSpeech(outDir)
+
+
+def getSpeech(path, streamNo, lang, channels=None, runCb=None):
+    """Speech (start, end) times in the whole audio stream, detected in this
+    process or in separate Python (see `findPython`), cached with this
+    stream's transcripts. `None` when speech can't be detected here.
+
+    Used to polish what SubSync's original speech recognition found, the
+    same way transcripts are (see `refineFormula`).
+    """
+    outDir = getCacheDir(path, streamNo, lang, False, None, channels)
+    speech = loadSpeech(outDir)
+    if speech is not None:
+        return speech
+
+    if _hasModule():
+        return planSpeech(path, outDir, streamNo, channels, runCb)
+
+    python = findPython()
+    if not python:
+        return None
+    import subprocess
+    cmd = [ python, os.path.abspath(__file__), path, '--chunks-dir', outDir, '--speech-only' ]
+    if streamNo is not None:
+        cmd += [ '-s', str(streamNo + 1) ]
+    if channels:
+        cmd += [ '--channels', ','.join(channels) ]
+    logger.info('running speech detection: %s', ' '.join(cmd))
+    flags = 0x08000000 if sys.platform == 'win32' else 0  # no console window
+    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, creationflags=flags)
+    try:
+        while True:
+            try:
+                proc.wait(timeout=0.5)
+                break
+            except subprocess.TimeoutExpired:
+                if runCb and not runCb():
+                    raise Terminated()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+    return loadSpeech(outDir)
+
+
 def getTranscriptChunks(path, streamNo, lang, translate=False, model=None,
         runCb=None, progressCb=None, chunkCb=None, planCb=None, channels=None):
     """Transcribe audio stream to cached SRT chunks, in this process or in
@@ -1665,6 +1721,8 @@ def main(argv=None):
             help='print progress in machine readable form')
     parser.add_argument('--detect-language', action='store_true',
             help='only print the spoken language (whisper code) and its probability')
+    parser.add_argument('--speech-only', action='store_true',
+            help='with --chunks-dir: only detect speech, without transcribing')
     args = parser.parse_args(argv)
     streamNo = None if args.stream is None else args.stream - 1
     channels = [ ch.strip().upper() for ch in args.channels.split(',') if ch.strip() ] \
@@ -1685,6 +1743,11 @@ def main(argv=None):
         if args.detect_language:
             res = detectLanguage(args.input, streamNo, model=args.model)
             print('language {} {:.3f}'.format(*res) if res else 'language none')
+            return 0
+
+        if args.chunks_dir and args.speech_only:
+            planSpeech(args.input, args.chunks_dir, streamNo, channels)
+            report('done')
             return 0
 
         if args.chunks_dir:

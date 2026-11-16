@@ -94,10 +94,19 @@ The tests use deliberately mistimed copies of correct subtitles, and compare Sub
 
 | Result | Languages |
 |---|---|
-| **All lines within 0.2 s**, song lines as well as dialogue (worst line 0.04–0.15 s) | 4 of 5 (English, Spanish, Chinese, Czech) |
+| **All lines within 0.2 s**, song lines as well as dialogue (worst line 0.04–0.07 s) | 4 of 5 (English, Spanish, Chinese, Czech) |
 | Every line 0.2–0.37 s from the file's timing: this French file shows lines about 0.3 s later than SubSync's "just before speech", throughout | 1 of 5 |
 
 The speech detector counted about a quarter of the singing as speech; it didn't move any line.
+
+**English films with English subtitles** (from 0.21), each film's own English file mistimed by the same 4.3% plus 9.4 s. These go through the original SubSync method, whose result is now checked and polished against the detected speech:
+
+| Result | Films |
+|---|---|
+| **99.8–100% of lines within 0.2 s** (the few others are lines in the first 9 seconds, which this mistiming pushes before 0:00) | 7 of 11 |
+| Every line moved by about the same 0.2–0.5 s against the file (at most 0.14 s apart): these files show lines after the speech starts, or 0.35 s before it | 4 of 11 |
+
+Before the speech check, one of these films (Cars) had only 65% of lines within 0.2 s, because the original method stops listening once its answer looks good enough. Two more films were left out: their subtitle files don't match these copies of the films (one is 1.85 s early throughout, the other made for another frame rate).
 
 Anyone can repeat both tests, see [Building from source](#building-from-source).
 
@@ -122,7 +131,7 @@ On 5.1 audio, Whisper listens only to the center channel, where the dialogue is,
 | **Subtitles in the same language as the audio**, e.g. Japanese subtitles with Japanese audio | Whisper writes down the speech in that language and matches it with your subtitles | 1 Japanese film (97 minutes) whose subtitles were already correct: confirmed after 2 of 20 parts, every line kept within 0.08 s |
 | **Subtitles in another language**, audio in Japanese or another language listed below (from 0.20), e.g. Spanish subtitles with Japanese audio | Whisper translates the speech to English, and your subtitles are translated to English on your computer, only for matching (they are never changed) | Spanish and Polish on 3 Japanese films |
 | **English audio with subtitles in another language** (from 0.20), e.g. Japanese subtitles for an English film | Whisper writes down the English speech, and your subtitles are translated to English for matching | Real Portuguese, Bulgarian and French subtitles on 2 films |
-| **English audio with English subtitles** | The original SubSync method first. If it can't sync them, Whisper writes down the English speech and matches it with your subtitles (from 0.20, when the speech model is already downloaded) | Tears of Steel: the original method saved nothing, Whisper got all lines within 0.2 s |
+| **English audio with English subtitles** | The original SubSync method first, its result then checked and polished against the speech detected in the whole film (from 0.21; kept as found when speech doesn't confirm it). If it can't sync them, Whisper writes down the English speech and matches it with your subtitles (from 0.20, when the speech model is already downloaded) | Tears of Steel: the original method saved nothing, Whisper got all lines within 0.2 s |
 | Audio in the other languages the original SubSync supports (French, German and others) | The original SubSync method, unchanged, with its dictionaries for subtitles in another language | By the original project |
 
 Translation needs a second one-time download (about 490 MB) and adds 1–2.5 minutes per film the first time; the result is kept, so syncing the same subtitles again is quick.

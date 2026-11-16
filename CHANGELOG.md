@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ## [Unreleased]
 
+### Fixed
+- **English films with English subtitles** (and other languages the original SubSync method handles) could come out up to half a second off near the end of a long film, depending on the computer: the original method stops listening once its answer looks good enough, and how much of the film it has heard by then depends on the processor. Its result is now checked against the speech detected in the whole film, polished (speed, offset, and the start-of-speech timing used for other films) and kept as found when speech doesn't confirm it. No download is needed; it adds about 30 seconds per film on the test laptop. On 11 English films, mistimed: 7 with all lines within 0.2 s (Cars was 65% before), 4 consistently timed differently by their files; on Sita Sings the Blues, the English result no longer depends on the computer (100% in every simulated early stop).
+
 ### Added
 - **End-to-end test on a full-length film with many songs.** `tests/e2e/sita_sings_the_blues.py` syncs subtitles of Sita Sings the Blues (Nina Paley, public domain, 82 minutes, about a third of its lines sung) in English, Spanish, Chinese, Czech and French, mistimed by a 4.3% speed difference plus 9.4 s, and scores song lines and dialogue separately. English, Spanish, Chinese and Czech: all lines within 0.2 s, songs as well as dialogue; the French file is timed about 0.3 s later than SubSync's target throughout, so it is shown but doesn't fail the test. It runs on both packages before every release, like the Tears of Steel test.
 

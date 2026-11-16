@@ -405,6 +405,24 @@ class ChannelsTest(unittest.TestCase):
         a, b = audio, self.dialogue[2 * n:3 * n]
         self.assertGreater(float(np.dot(a, b) / np.sqrt(np.dot(a, a) * np.dot(b, b))), 0.99)
 
+    def test_speech_only(self):
+        # speech detection without transcription (to polish the original
+        # method's result) is kept like transcripts' plan, and reused
+        out = tempfile.mkdtemp(prefix='subsync-test-')
+        try:
+            speech = t.planSpeech(self.path, out, channels=['FC'])
+            self.assertIsInstance(speech, list)
+            self.assertEqual(t.loadSpeech(out), speech)
+            self.assertAlmostEqual(t.loadPlan(out)[-1][1], 6.0, delta=0.01)
+            self.assertFalse(any(name.startswith('chunk-') for name in os.listdir(out)))
+            mtime = os.path.getmtime(os.path.join(out, 'plan.json'))
+            t.planSpeech(self.path, out, channels=['FC'])
+            self.assertEqual(os.path.getmtime(os.path.join(out, 'plan.json')), mtime)
+        finally:
+            for name in os.listdir(out):
+                os.remove(os.path.join(out, name))
+            os.rmdir(out)
+
     def test_chunks_and_cache(self):
         self.assertNotEqual(t.getCacheDir(self.path, None, 'jpn'),
                 t.getCacheDir(self.path, None, 'jpn', channels=['FC']))

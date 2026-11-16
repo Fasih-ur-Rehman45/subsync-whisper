@@ -246,6 +246,58 @@ class Synchronizer(object):
                 chunksDone, stats.formula, self.refinedFormula)
         return 'confirmed'
 
+    def polishWithSpeech(self, runCb=None):
+        ''' Polish the original method's result with speech of the whole
+        file, like transcribed results are (see _isTranscriptEnough): the
+        original method stops once its result looks good enough (minEffort),
+        and how much of the file it has heard by then depends on the
+        computer, so its speed can be a little off, which grows to half a
+        second at the end of a long film. Speech overlap, the region check
+        and the start-of-speech correction make it precise; when speech
+        doesn't confirm it, the original result stays. '''
+        if self.route != route.ORIGINAL or self.ref.type != 'audio' or self.piecewiseOffsets:
+            return False
+        with self.statsLock:
+            stats = self.stats
+        if not stats.correlated or self.refinedFormula is not None:
+            return False
+        if not transcribe.isAvailable():
+            logger.info('speech polish skipped, speech detection is not available')
+            return False
+
+        try:
+            self.onInitProgress(_('Checking the timing against speech...'))
+            speech = transcribe.getSpeech(self.ref.path, self.ref.no, self.ref.lang or 'eng',
+                    pipeline.listenedChannels(self.ref), runCb)
+        except transcribe.Terminated:
+            return False
+        except Exception as err:
+            logger.warning('speech detection failed: %r', err, exc_info=True)
+            return False
+        if not speech:
+            logger.info('speech polish skipped, no speech detected')
+            return False
+
+        with self.subtitlesCollector.subtitlesLock:
+            subs = [ (e.start / 1000.0, e.end / 1000.0)
+                    for e in self.subtitlesCollector.getSubtitles().events ]
+        res = transcribe.refineFormula(subs, speech, stats.formula.a, stats.formula.b)
+        if res is None:
+            logger.info('%s not confirmed by speech, kept as found', stats.formula)
+            return False
+        if not transcribe.checkRegions(subs, speech, res[0], res[1]):
+            logger.info('%.6fx%+.3f not confirmed by speech in every region, %s kept',
+                    res[0], res[1], stats.formula)
+            return False
+
+        shift = transcribe.leadShift([ (res[0] * s + res[1], res[0] * e + res[1]) for s, e in subs ],
+                speech, self._leadTarget())
+        with self.statsLock:
+            self.refinedFormula = gizmo.Line(res[0], res[1] + shift)
+        logger.info('%.6fx%+.3f polished with speech to %.6fx%+.3f', stats.formula.a,
+                stats.formula.b, self.refinedFormula.a, self.refinedFormula.b)
+        return True
+
     def _transcriptMismatch(self, subs, speech, chunks, formula):
         ''' Speech fits a formula on the whole, but part of the movie does not.
         After `transcriptMaxMismatches` such results, subtitles are likely made

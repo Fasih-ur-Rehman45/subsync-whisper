@@ -417,6 +417,10 @@ class SyncController(object):
             try:
                 sync.stop(force=True)
                 status = sync.getStatus()
+                # the original method's result is polished with speech
+                if not self._terminated and status and status.correlated \
+                        and sync.polishWithSpeech(runCb=lambda: not self._terminated):
+                    status = sync.getStatus()
             except Exception as err:
                 logger.warning('%r', err, exc_info=True)
                 self._onError(task, 'core', err)
