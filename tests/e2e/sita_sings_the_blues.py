@@ -44,6 +44,7 @@ from tears_of_steel import parseTime, writeSrt, compare     # noqa: E402
 
 VIDEO = 'RzTg7YXuy34.mp4'
 VIDEO_URL = 'https://archive.org/download/youtube-RzTg7YXuy34/RzTg7YXuy34.mp4'
+LENGTH = 4891.25    # seconds of audio
 AMARA = 'https://amara.org/api/videos/YkwgVDEZTA0g/languages/{}/subtitles/?format=srt'
 SUBS = {
         'en': ('eng', AMARA.format('en')),
@@ -99,12 +100,19 @@ def download(data, langs):
 
 
 def speechOverSongs():
-    """Share of song and of other time detected as speech, from the newest
-    transcript cache (written by the run that just finished)."""
-    plans = glob.glob(os.path.join(tempfile.gettempdir(), 'subsync-transcripts', '*', 'plan.json'))
+    """Share of song time detected as speech, from the newest transcript
+    cache of this film (its chunks end at the film's length)."""
+    plans = []
+    for path in glob.glob(os.path.join(tempfile.gettempdir(), 'subsync-transcripts', '*', 'plan.json')):
+        try:
+            plan = json.load(open(path))
+            if plan.get('speech') and abs(plan['chunks'][-1][1] - LENGTH) < 5.0:
+                plans.append((os.path.getmtime(path), plan['speech']))
+        except (OSError, ValueError, KeyError, IndexError):
+            pass
     if not plans:
         return None
-    speech = json.load(open(max(plans, key=os.path.getmtime)))['speech']
+    speech = max(plans)[1]
     song = sum(max(0.0, min(b, e) - max(a, s)) for a, b in SONGS for s, e in speech)
     total = sum(b - a for a, b in SONGS)
     return 100 * song / total

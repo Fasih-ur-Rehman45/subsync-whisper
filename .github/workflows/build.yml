@@ -316,6 +316,13 @@ jobs:
         shell: bash
         run: python tests/e2e/sita_sings_the_blues.py --app app/subsync-cmd.exe --data sita --work e2e-sita --download
 
+      # Whisper's output differs a little between machines: on failure, keep
+      # the transcripts to see which lines decided it
+      - name: Collect transcripts
+        if: failure()
+        shell: bash
+        run: python -c "import os, shutil, tempfile; src = os.path.join(tempfile.gettempdir(), 'subsync-transcripts'); os.path.isdir(src) and shutil.copytree(src, 'e2e-transcripts')"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -323,6 +330,7 @@ jobs:
           path: |
             e2e-work
             e2e-sita/*.log
+            e2e-transcripts
 
   e2e-linux:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -367,6 +375,10 @@ jobs:
         if: success() || failure()
         run: python tests/e2e/sita_sings_the_blues.py --app app/subsync/subsync-cmd --data sita --work e2e-sita --download
 
+      - name: Collect transcripts
+        if: failure()
+        run: python -c "import os, shutil, tempfile; src = os.path.join(tempfile.gettempdir(), 'subsync-transcripts'); os.path.isdir(src) and shutil.copytree(src, 'e2e-transcripts')"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -374,6 +386,7 @@ jobs:
           path: |
             e2e-work
             e2e-sita/*.log
+            e2e-transcripts
 
   release:
     # version tags publish both builds on one release page, after both pass

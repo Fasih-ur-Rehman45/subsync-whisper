@@ -193,6 +193,34 @@ class ChecksTest(FilmTest):
     def test_chunks_need_two_opinions(self):
         self.assertFalse(t.checkChunks(self.file, self.chunks[:1], SPEED, OFFSET))
 
+    def test_short_video_small_chunks_judged_together(self):
+        # parts with fewer than checkMinLines lines (e.g. after stretched
+        # lines were left out) still count together in a short video
+        video = [ l for l in self.video if l[0] < 1200.0 ]
+        chunks = []
+        for pos in (0.1, 0.35, 0.6, 0.85):
+            first = int(pos * (len(video) - 6))
+            chunks.append([ (s + 0.3, e + 0.3, text if no < 2 else 'mumble')
+                for no, (s, e, text) in enumerate(video[first:first + 6]) ])
+        self.assertTrue(t.checkChunks(mistime(video, SPEED, OFFSET), chunks, SPEED, OFFSET))
+        self.assertFalse(t.checkChunks(self.file, chunks, SPEED, OFFSET))
+
+    def test_stretched_lines_left_out(self):
+        # Whisper line spanning a song: 75 s for text read in 4 s, timed
+        # 70 s before its words; normal and slowly sung lines stay
+        text = "I've committed a terrible sin in a previous life"
+        self.assertTrue(t.isStretched(3609.1, 3684.1, text))
+        self.assertFalse(t.isStretched(3380.4, 3386.4, text))
+        self.assertFalse(t.isStretched(100.0, 112.0, 'Moanin low, my sweet man'))
+        path = os.path.join(tempfile.mkdtemp(prefix='subsync-test-'), 'chunk-000.srt')
+        try:
+            t.writeSrt(path, [ (3380.7, 3386.4, 'I think basically as a king'),
+                               (3609.4, 3684.1, text) ])
+            self.assertEqual([ l[2] for l in t.readChunk(path) ], [ 'I think basically as a king' ])
+        finally:
+            os.remove(path)
+            os.rmdir(os.path.dirname(path))
+
     def test_short_video_chunks_judged_together(self):
         # 4 parts of a short video with only 2 recognizable lines each: too
         # few on their own, enough together (in a long film, never pooled)

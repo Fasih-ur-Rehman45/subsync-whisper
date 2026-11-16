@@ -223,7 +223,7 @@ class Synchronizer(object):
 
         # speech overlap judges the whole file at once, every transcribed chunk
         # must agree on its own too (subtitles could be made for another cut)
-        chunks = [ transcribe.readSrt(transcribe.getChunkPath(pipe.cacheDir, no))
+        chunks = [ transcribe.readChunk(transcribe.getChunkPath(pipe.cacheDir, no))
                 for no in pipe.chunksDoneList ]
         if not transcribe.checkChunks(subs, chunks, res[0], res[1], self.minWordLen,
                 self.ngrams):

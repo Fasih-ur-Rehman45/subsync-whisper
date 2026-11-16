@@ -79,6 +79,13 @@ lineReadingSpeed = 17.0     # characters per second
 lineMinDuration = 0.833
 lineMaxDuration = 7.0
 lineMinGap = 0.083
+# Whisper's speech filter cuts music out, and sometimes joins speech from
+# both sides of a song into one segment: it then lasts far longer than its
+# text needs (75 s for 4 s of text across a song in Sita Sings the Blues)
+# and starts far from where the words are said; such lines are left out,
+# they made a whole transcribed part disagree with the right timing
+lineMaxStretch = 3.0        # times the reading time of the text,
+lineStretchSlack = 10.0     # plus this many seconds
 
 # bump when transcript content or timing changes, to not reuse old cache
 cacheVersion = 3
@@ -516,6 +523,24 @@ def getLanguage(path, streamNo=None, model=None, runCb=None):
 
 # --- transcription ---------------------------------------------------------
 
+def isStretched(start, end, text):
+    """Transcript line lasting far longer than its text needs, see
+    `lineMaxStretch`."""
+    return end - start > lineMaxStretch * len(text) / lineReadingSpeed + lineStretchSlack
+
+
+def readChunk(path):
+    """Transcript lines of a chunk (see `readSrt`) without stretched ones
+    (see `isStretched`), also of chunks transcribed before they were left
+    out: a line keeps the end of its speech (see `timeLines`)."""
+    lines = readSrt(path)
+    res = [ l for l in lines if not isStretched(*l) ]
+    if len(res) < len(lines):
+        logger.info('%i stretched transcript lines left out of %s', len(lines) - len(res),
+                os.path.basename(path))
+    return res
+
+
 def timeLines(lines):
     """Time transcript lines like subtitles, see `lineLeadIn` and following.
 
@@ -732,7 +757,10 @@ def transcribeRange(whisper, path, streamNo, start, end, lang, translate=False,
             raise Terminated()
 
         text = ' '.join(segment.text.split())
-        if text and segment.end > segment.start:
+        if isStretched(segment.start, segment.end, text):
+            logger.info('stretched transcript line left out: %s - %s, %s', formatTime(start + segment.start),
+                    formatTime(start + segment.end), text[:40])
+        elif text and segment.end > segment.start:
             lines.append((start + segment.start, start + segment.end, text))
 
         if progressCb:
@@ -955,7 +983,10 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
     pool = [ 0, 0 ] if isShort(subs) else None
 
     for no, lines in enumerate(chunks):
-        if len(lines) < checkMinLines:
+        # chunk with few lines isn't judged on its own, in a short video its
+        # matches are still judged together with other such chunks
+        few = len(lines) < checkMinLines
+        if few and pool is None:
             continue
 
         diffs = []
@@ -988,7 +1019,9 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
 
         # chunk with too few matches has no opinion, it disagrees only when
         # its matches clearly point elsewhere
-        if near >= checkMinMatches and near > other:
+        if few:
+            verdict = 'too few lines'
+        elif near >= checkMinMatches and near > other:
             verdict = 'agrees'
             agree += 1
         elif other >= checkMinMatches and other >= near:
@@ -999,7 +1032,7 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
         logger.info('chunk check: %i lines, %i matches agree, %i in another cluster: %s',
                 len(lines), near, other, verdict)
 
-        if pool is not None and verdict == 'too few matches':
+        if pool is not None and verdict in ('too few matches', 'too few lines'):
             pool[0] += near
             pool[1] += other
             if pool[0] >= checkMinMatches and pool[0] > pool[1]:
