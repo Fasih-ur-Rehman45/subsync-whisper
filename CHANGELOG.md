@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ## [Unreleased]
 
+### Added
+- **End-to-end test on a full-length film with many songs.** `tests/e2e/sita_sings_the_blues.py` syncs subtitles of Sita Sings the Blues (Nina Paley, public domain, 82 minutes, about a third of its lines sung) in English, Spanish, Chinese, Czech and French, mistimed by a 4.3% speed difference plus 9.4 s, and scores song lines and dialogue separately. English, Spanish, Chinese and Czech: all lines within 0.2 s, songs as well as dialogue; the French file is timed about 0.3 s later than SubSync's target throughout, so it is shown but doesn't fail the test. It runs on both packages before every release, like the Tears of Steel test.
+
 ## [0.20] - 2026-11-15
 
 ### Fixed

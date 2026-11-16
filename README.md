@@ -90,7 +90,16 @@ The tests use deliberately mistimed copies of correct subtitles, and compare Sub
 |---|---|
 | **All lines within 0.2 s** of the official timing, 0.18 s after it: the official files show lines 0.33 s before people speak, SubSync 0.15 s | 6 of 6 |
 
-Anyone can repeat this test, see [Building from source](#building-from-source).
+**A full-length film with many songs** (from 0.21): [Sita Sings the Blues](https://sitasingstheblues.com) (a free 82-minute English film, about a third of its lines sung), with community subtitles in English, Spanish, Chinese, Czech and French, mistimed by a speed difference of 4.3% plus 9.4 s:
+
+| Result | Languages |
+|---|---|
+| **All lines within 0.2 s**, song lines as well as dialogue (worst line 0.04–0.15 s) | 4 of 5 (English, Spanish, Chinese, Czech) |
+| Every line 0.2–0.37 s from the file's timing: this French file shows lines about 0.3 s later than SubSync's "just before speech", throughout | 1 of 5 |
+
+The speech detector counted about a quarter of the singing as speech; it didn't move any line.
+
+Anyone can repeat both tests, see [Building from source](#building-from-source).
 
 **Time,** on a laptop with an AMD Ryzen 9 5900HX processor and 8 GB of RAM, using no graphics card:
 - Most films: 1.5–2.5 minutes the first time, seconds when syncing the same film again.
@@ -174,6 +183,12 @@ The end-to-end test syncs the official subtitles of Tears of Steel with the buil
 python tests/e2e/tears_of_steel.py --app dist/subsync/subsync-cmd.exe --data tos --download
 ```
 
+A second end-to-end test does the same on Sita Sings the Blues, a full-length film with many songs, and scores song lines and dialogue separately. It runs before every release too. `--download` fetches the film (481 MB) from archive.org and its subtitles from Amara and archive.org:
+
+```
+python tests/e2e/sita_sings_the_blues.py --app dist/subsync/subsync-cmd.exe --data sita --download
+```
+
 To release a version:
 1. In [CHANGELOG.md](CHANGELOG.md), rename **Unreleased** to the new version and date.
 2. Push a version tag such as `0.19`.
@@ -190,5 +205,5 @@ SubSync is free software under the [GNU General Public License v3](LICENSE).
 - Speech recognition for other languages: [CMU Sphinx](https://github.com/cmusphinx) (BSD).
 - Translation: Meta's [M2M100](https://huggingface.co/facebook/m2m100_418M) 418M model (MIT), in the [CTranslate2 conversion by jncraton](https://huggingface.co/jncraton/m2m100_418M-ct2-int8) (MIT), with [SentencePiece](https://github.com/google/sentencepiece) (Apache-2.0).
 - Audio and video: [FFmpeg](https://ffmpeg.org) 5.1.2, the [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) full shared build (GPL-3.0); source code at [ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz](https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.xz). Also [PyAV](https://github.com/PyAV-Org/PyAV) (BSD).
-- End-to-end test film: [Tears of Steel](https://mango.blender.org) by the Blender Foundation (CC-BY 3.0), downloaded by the test, not included.
+- End-to-end test films: [Tears of Steel](https://mango.blender.org) by the Blender Foundation (CC-BY 3.0), and [Sita Sings the Blues](https://sitasingstheblues.com) by Nina Paley (public domain, CC0), with community subtitles from [Amara](https://amara.org/en/videos/YkwgVDEZTA0g/info/) and [archive.org](https://archive.org/details/SitaSingsTheBluesCsSubtitles); downloaded by the tests, not included.
 - Window: [wxPython](https://wxpython.org) (wxWindows Library Licence). Subtitles: [pysubs2](https://github.com/tkarabela/pysubs2) (MIT). Engine bindings: [pybind11](https://github.com/pybind/pybind11) (BSD).

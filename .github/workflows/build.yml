@@ -304,11 +304,25 @@ jobs:
         shell: bash
         run: python tests/e2e/tears_of_steel.py --app app/subsync-cmd.exe --data tos --work e2e-work --download
 
+      # full-length, music-heavy film (481 MB and its subtitles)
+      - uses: actions/cache@v4
+        if: success() || failure()
+        with:
+          path: sita
+          key: e2e-sita-${{ runner.os }}-v1
+
+      - name: Sita Sings the Blues
+        if: success() || failure()
+        shell: bash
+        run: python tests/e2e/sita_sings_the_blues.py --app app/subsync-cmd.exe --data sita --work e2e-sita --download
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-windows
-          path: e2e-work
+          path: |
+            e2e-work
+            e2e-sita/*.log
 
   e2e-linux:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -342,11 +356,24 @@ jobs:
       - name: Tears of Steel
         run: python tests/e2e/tears_of_steel.py --app app/subsync/subsync-cmd --data tos --work e2e-work --download
 
+      # full-length, music-heavy film (481 MB and its subtitles)
+      - uses: actions/cache@v4
+        if: success() || failure()
+        with:
+          path: sita
+          key: e2e-sita-${{ runner.os }}-v1
+
+      - name: Sita Sings the Blues
+        if: success() || failure()
+        run: python tests/e2e/sita_sings_the_blues.py --app app/subsync/subsync-cmd --data sita --work e2e-sita --download
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-linux
-          path: e2e-work
+          path: |
+            e2e-work
+            e2e-sita/*.log
 
   release:
     # version tags publish both builds on one release page, after both pass
