@@ -125,6 +125,10 @@ checkTolerance = 2.0
 checkMinLines = 10      # chunks with fewer transcript lines are not judged
 checkMinMatches = 3
 checkMinChunks = 2      # this many chunks must agree
+# a transcript line starting while its subtitle line is shown is on time:
+# Whisper splits long sentences, the later pieces start seconds after the
+# subtitle line; lines shown longer than this are counted only this long
+checkSpanMax = 10.0
 
 # speech of the whole file is checked region by region too (see checkRegions),
 # as transcribed chunks may miss the part of the movie that does not fit:
@@ -957,6 +961,9 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
     different cut) could still pass it. Here words of transcript lines are
     matched with nearby subtitle lines, separately in every chunk. When the
     formula is right, time differences of the matches cluster around zero.
+    A transcript line is measured against the time its subtitle line is
+    shown: starting anywhere in it is on time (Whisper may split one
+    subtitle line in pieces), before or after it is that far off.
 
     Parameters
     ----------
@@ -977,8 +984,15 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
     """
     import bisect
 
-    subWords = sorted((a * start + b, _words(text, minWordLen, ngrams)) for start, _, text in subs)
+    subWords = sorted((a * start + b, a * min(end, start + checkSpanMax) + b,
+            _words(text, minWordLen, ngrams)) for start, end, text in subs)
     subTimes = [ x[0] for x in subWords ]
+
+    def difference(time, begin, end):
+        # transcript line start against the span its subtitle line is shown
+        if time < begin:
+            return time - begin
+        return max(0.0, time - end)
     agree, disagree = 0, 0
     pool = [ 0, 0 ] if isShort(subs) else None
 
@@ -999,12 +1013,12 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
             # subtitle line sharing the most words; skipped when ambiguous
             # (words repeated in many lines, e.g. names, would match anywhere)
             best, found = 0, []
-            for time, sw in subWords[lo:hi]:
+            for begin, end, sw in subWords[lo:hi]:
                 shared = len(words & sw)
                 if shared > best:
-                    best, found = shared, [ start - time ]
+                    best, found = shared, [ difference(start, begin, end) ]
                 elif shared and shared == best:
-                    found.append(start - time)
+                    found.append(difference(start, begin, end))
             if found and max(found) - min(found) <= 2 * checkTolerance:
                 diffs.append(sum(found) / len(found))
 

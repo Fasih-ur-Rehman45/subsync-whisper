@@ -190,6 +190,16 @@ class ChecksTest(FilmTest):
     def test_chunks_refuse_cut(self):
         self.assertFalse(t.checkChunks(self.cutFile, self.chunks, SPEED, OFFSET))
 
+    def test_split_sentences_agree(self):
+        # Whisper split long subtitle lines in pieces: the later pieces start
+        # 2.5 s or more after their line, while it is still shown
+        chunks = []
+        for pos in (0.05, 0.3, 0.5, 0.7, 0.95):
+            long = [ l for l in self.video[int(pos * (len(self.video) - 40)):] if l[1] - l[0] >= 3.2 ]
+            chunks.append([ (e - 0.5, e + 1.0, text) for s, e, text in long[:12] ])
+        self.assertTrue(t.checkChunks(self.file, chunks, SPEED, OFFSET))
+        self.assertFalse(t.checkChunks(self.cutFile, chunks, SPEED, OFFSET))
+
     def test_chunks_need_two_opinions(self):
         self.assertFalse(t.checkChunks(self.file, self.chunks[:1], SPEED, OFFSET))
 
