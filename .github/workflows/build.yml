@@ -409,5 +409,6 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           ls -l files
+          (cd files && sha256sum * > SHA256SUMS && cat SHA256SUMS)
           python3 .github/release_notes.py "$TAG" release-notes.md
           gh release create "$TAG" files/* --title "SubSync $TAG" --notes-file release-notes.md

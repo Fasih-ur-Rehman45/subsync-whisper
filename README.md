@@ -64,7 +64,7 @@ It keeps your subtitle text and layout exactly as they were and only changes the
 
 ## Speed and accuracy
 
-The tests use deliberately mistimed copies of correct subtitles, and compare SubSync's result with the correct timing line by line. A 0.2 s difference isn't noticeable when watching.
+The tests use deliberately mistimed copies of correct subtitles, and compare SubSync's result with the correct timing line by line. A 0.2 s difference isn't noticeable when watching. [doc/benchmark.md](doc/benchmark.md) describes the method: the timing errors applied, how lines are scored, which test sets anyone can rerun, and the limits.
 
 **Japanese films with English subtitles** (9 films, about 2 hours each):
 
@@ -140,7 +140,7 @@ The audio language itself is detected with Whisper when the video doesn't say it
 
 ## Your privacy
 
-Speech recognition and translation run on your computer. Your videos and subtitles are never uploaded. The only downloads are the speech and translation models, from `huggingface.co`, always the exact versions SubSync was tested with, and, for languages handled by the original method, the original SubSync's speech models and dictionaries.
+Speech recognition and translation run on your computer. Your videos and subtitles are never uploaded. The only downloads are the speech and translation models, from `huggingface.co`, always the exact versions SubSync was tested with, and, for languages handled by the original method, the original SubSync's speech models and dictionaries. [SECURITY.md](SECURITY.md) lists how each download is checked, how to verify a release file with its checksum, and how to report a security problem.
 
 ## Known limits
 

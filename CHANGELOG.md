@@ -13,7 +13,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 - **Long sentences split by Whisper could block a sync.** Each transcribed part is checked by matching its lines with the subtitles. A match counted as on time only when the transcript line started within 2 seconds of its subtitle line's start, but Whisper sometimes splits one long subtitle sentence into pieces, and the later pieces start 2–3 seconds in, while the line is still shown. In fast dialogue of Sita Sings the Blues, these made a part "disagree" with the right timing, and Spanish subtitles were refused in one Linux run (whether Whisper splits a sentence can differ between computers). A transcript line starting while its subtitle line is shown now counts as on time; subtitles of a different cut are still caught, as they are off by far more than a line lasts. With the same Linux transcripts, Spanish now syncs with all lines within 0.2 s; the 26 test cases on 9 Japanese films, Tears of Steel and the other Sita languages give the same results as before.
 
+- A download of one speech model could stand in for another's: while one Whisper model was downloading, a request for a different model waited for it and then went on as if its own model were there. Downloads are now kept per model. The translation model's download can no longer be started twice by two callers at once.
+
+### Security
+- Downloaded asset archives (the original method's speech models and dictionaries) are refused as a whole when any file in them would be written outside the asset folder. These archives were already signature-checked, and Python's zip extraction already drops `..` from paths; this is a second safeguard.
+- `SECURITY.md` says how to report a security problem privately, which versions get fixes, and how each download is checked.
+- Release pages list a `SHA256SUMS` file with the checksum of every download.
+
 ### Added
+- **How the accuracy tests are done:** `doc/benchmark.md` describes the answer keys, the timing errors applied, how lines are scored, the timing-style rule, which test sets anyone can rerun and the machines used.
 - **End-to-end test on a full-length film with many songs.** `tests/e2e/sita_sings_the_blues.py` syncs subtitles of Sita Sings the Blues (Nina Paley, public domain, 82 minutes, about a third of its lines sung) in English, Spanish, Chinese, Czech and French, mistimed by a 4.3% speed difference plus 9.4 s, and scores song lines and dialogue separately. English, Spanish, Chinese and Czech: all lines within 0.2 s, songs as well as dialogue; the French file is timed about 0.3 s later than SubSync's target throughout, so it is shown but doesn't fail the test. It runs on both packages before every release, like the Tears of Steel test.
 
 ## [0.20] - 2026-11-15
