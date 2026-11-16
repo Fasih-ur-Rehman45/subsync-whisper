@@ -1,5 +1,6 @@
 from subsync import config
 from subsync import pubkey
+from subsync.assets import safezip
 from subsync.translations import _
 from subsync.error import Error
 import os
@@ -244,7 +245,11 @@ class AssetDownloader(object):
                 logger.info('extracting zip asset to %s', dstdir)
                 os.makedirs(dstdir, exist_ok=True)
                 zipf = zipfile.ZipFile(fp)
-                zipf.extractall(dstdir)
+                try:
+                    safezip.extractAll(zipf, dstdir)
+                except ValueError as e:
+                    raise Error('Invalid asset archive', asset=self._asset.getId(),
+                            reason=str(e)) from e
                 logger.info('extraction completed')
 
             else:
