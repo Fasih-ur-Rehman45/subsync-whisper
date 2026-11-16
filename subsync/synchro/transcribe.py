@@ -1032,20 +1032,18 @@ def checkChunks(subs, chunks, a, b, minWordLen=5, ngrams=None):
         logger.info('chunk check: %i lines, %i matches agree, %i in another cluster: %s',
                 len(lines), near, other, verdict)
 
+        # pooled, they can only agree: like a single chunk with too few
+        # matches, they have no opinion against the formula (a few lines
+        # merged differently by Whisper would block it), only chunks with
+        # enough matches of their own disagree
         if pool is not None and verdict in ('too few matches', 'too few lines'):
             pool[0] += near
             pool[1] += other
             if pool[0] >= checkMinMatches and pool[0] > pool[1]:
-                verdict = 'agree'
+                logger.info('chunk check: chunks with too few matches together: '
+                        '%i matches agree, %i in another cluster: agree', pool[0], pool[1])
                 agree += 1
-            elif pool[1] >= checkMinMatches and pool[1] >= pool[0]:
-                verdict = 'DISAGREE'
-                disagree += 1
-            else:
-                continue
-            logger.info('chunk check: chunks with too few matches together: '
-                    '%i matches agree, %i in another cluster: %s', pool[0], pool[1], verdict)
-            pool = [ 0, 0 ]
+                pool = [ 0, 0 ]
 
     return disagree == 0 and agree >= checkMinChunks
 
