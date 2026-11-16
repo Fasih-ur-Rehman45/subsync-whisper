@@ -138,6 +138,7 @@ def _downloadedBytes():
 
 
 _download = None
+_downloadLock = threading.Lock()
 
 
 def downloadModel(runCb=None, progressCb=None):
@@ -149,22 +150,22 @@ def downloadModel(runCb=None, progressCb=None):
     if isModelInstalled() is not False:
         return True
 
-    if _download is None or not _download['thread'].is_alive():
-        state = { 'error': None }
+    with _downloadLock:
+        if _download is None or not _download['thread'].is_alive():
+            state = { 'error': None }
 
-        def run():
-            try:
-                logger.info('downloading translation model %s', modelRepo)
-                _modelPath(localOnly=False)
-            except Exception as err:
-                logger.warning('translation model download failed: %r', err, exc_info=True)
-                state['error'] = err
+            def run(state=state):
+                try:
+                    logger.info('downloading translation model %s', modelRepo)
+                    _modelPath(localOnly=False)
+                except Exception as err:
+                    logger.warning('translation model download failed: %r', err, exc_info=True)
+                    state['error'] = err
 
-        state['thread'] = threading.Thread(target=run, name='TranslationDownload', daemon=True)
-        state['thread'].start()
-        _download = state
-
-    state = _download
+            state['thread'] = threading.Thread(target=run, name='TranslationDownload', daemon=True)
+            state['thread'].start()
+            _download = state
+        state = _download
     while state['thread'].is_alive():
         if progressCb:
             progressCb(_downloadedBytes(), modelSize)

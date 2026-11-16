@@ -615,7 +615,9 @@ modelSizes = {
         'large-v2': 3090e6, 'large-v3': 3090e6,
         }
 
-_download = None    # running model download, shared by all callers
+# running model downloads by model, shared by all callers of the same model
+_downloads = {}
+_downloadsLock = threading.Lock()
 
 
 class DownloadFailed(Exception):
@@ -671,8 +673,8 @@ def downloadModel(model=None, runCb=None, progressCb=None):
     """Download the model to the Hugging Face cache, unless already there.
 
     Download continues in background if `runCb` stops waiting for it, and the
-    next call waits for the same download. Partially downloaded files are
-    resumed.
+    next call for the same model waits for the same download (a different
+    model is downloaded on its own). Partially downloaded files are resumed.
 
     Parameters
     ----------
@@ -690,32 +692,29 @@ def downloadModel(model=None, runCb=None, progressCb=None):
     ------
     DownloadFailed
     """
-    import threading
-    import time
-    global _download
-
     model = model or defaultModel()
     if isModelInstalled(model) is not False:
         return True
 
-    if _download is None or not _download['thread'].is_alive():
-        state = { 'error': None, 'model': model }
+    with _downloadsLock:
+        state = _downloads.get(model)
+        if state is None or not state['thread'].is_alive():
+            state = { 'error': None, 'model': model }
 
-        def run():
-            try:
-                from faster_whisper.utils import download_model
-                logger.info('downloading whisper model %s', model)
-                download_model(model, revision=modelRevision(model))
-                logger.info('whisper model %s downloaded', model)
-            except Exception as err:
-                logger.warning('whisper model download failed: %r', err, exc_info=True)
-                state['error'] = err
+            def run(state=state):
+                try:
+                    from faster_whisper.utils import download_model
+                    logger.info('downloading whisper model %s', model)
+                    download_model(model, revision=modelRevision(model))
+                    logger.info('whisper model %s downloaded', model)
+                except Exception as err:
+                    logger.warning('whisper model download failed: %r', err, exc_info=True)
+                    state['error'] = err
 
-        state['thread'] = threading.Thread(target=run, name='ModelDownload', daemon=True)
-        state['thread'].start()
-        _download = state
+            state['thread'] = threading.Thread(target=run, name='ModelDownload', daemon=True)
+            state['thread'].start()
+            _downloads[model] = state
 
-    state = _download
     size = getModelSize(model)
     while state['thread'].is_alive():
         if progressCb:

@@ -375,6 +375,50 @@ class CacheDirTest(unittest.TestCase):
             self.assertTrue(t.isModelInstalled(tmp))
 
 
+class ModelDownloadTest(unittest.TestCase):
+    """A download of one model must not stand in for another model's."""
+
+    def test_downloads_kept_by_model(self):
+        import sys
+        import threading
+        import types
+        from unittest import mock
+
+        release, calls = threading.Event(), []
+
+        def download_model(model, revision=None):
+            calls.append(model)
+            if model == 'small':
+                release.wait(10)
+
+        utils = types.ModuleType('faster_whisper.utils')
+        utils.download_model = download_model
+        modules = { 'faster_whisper': types.ModuleType('faster_whisper'),
+                    'faster_whisper.utils': utils }
+        with mock.patch.dict(sys.modules, modules), \
+                mock.patch.object(t, 'isModelInstalled', return_value=False), \
+                mock.patch.object(t, '_downloadedBytes', return_value=0), \
+                mock.patch.dict(t._downloads, clear=True):
+            try:
+                # 'small' keeps downloading in background
+                self.assertFalse(t.downloadModel('small', runCb=lambda: False))
+                # 'medium' is downloaded on its own, not mistaken for done
+                # when the 'small' download finishes (or waited for)
+                deadline = threading.Event()
+                timer = threading.Timer(5, deadline.set)
+                timer.start()
+                self.assertTrue(t.downloadModel('medium', runCb=lambda: not deadline.is_set()))
+                timer.cancel()
+                self.assertEqual(calls, [ 'small', 'medium' ])
+                # the same model waits for the running download
+                self.assertFalse(t.downloadModel('small', runCb=lambda: False))
+                self.assertEqual(calls, [ 'small', 'medium' ])
+            finally:
+                release.set()
+                for state in t._downloads.values():
+                    state['thread'].join(5)
+
+
 if __name__ == '__main__':
     unittest.main()
 
