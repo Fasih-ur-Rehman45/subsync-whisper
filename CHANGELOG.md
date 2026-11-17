@@ -21,7 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - Release pages list a `SHA256SUMS` file with the checksum of every download.
 
 ### Changed
-- **The project is now called SubSync Echo** (README, release pages), to tell it apart from the original SubSync. Its README and release pages now open with what it does for every language, not only Japanese. The app and its files keep the name `subsync`, and the repository moved to [Z0rdic/subsync-whisper](https://github.com/Z0rdic/subsync-whisper) (old links redirect).
+- **The project is now called SubSync Echo** (README, release pages), to tell it apart from the original SubSync. Its README and release pages now open with what it does for every language, not only Japanese. The app and its files keep the name `subsync`, and the repository moved and was renamed to [Z0rdic/SubSync-Echo](https://github.com/Z0rdic/SubSync-Echo) (links to the old addresses, including subsync-whisper, redirect).
 
 ### Added
 - **How the accuracy tests are done:** `doc/benchmark.md` describes the answer keys, the timing errors applied, how lines are scored, the timing-style rule, which test sets anyone can rerun and the machines used.
@@ -90,8 +90,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 Last release of the original [SubSync](https://github.com/sc0ty/subsync/releases/tag/0.17) by Michał Szymaniak.
 
-[Unreleased]: https://github.com/Z0rdic/subsync-whisper/compare/0.20...HEAD
-[0.20]: https://github.com/Z0rdic/subsync-whisper/releases/tag/0.20
-[0.19]: https://github.com/Z0rdic/subsync-whisper/releases/tag/0.19
-[0.18]: https://github.com/Z0rdic/subsync-whisper/releases/tag/0.18
+[Unreleased]: https://github.com/Z0rdic/SubSync-Echo/compare/0.20...HEAD
+[0.20]: https://github.com/Z0rdic/SubSync-Echo/releases/tag/0.20
+[0.19]: https://github.com/Z0rdic/SubSync-Echo/releases/tag/0.19
+[0.18]: https://github.com/Z0rdic/SubSync-Echo/releases/tag/0.18
 [0.17]: https://github.com/sc0ty/subsync/releases/tag/0.17

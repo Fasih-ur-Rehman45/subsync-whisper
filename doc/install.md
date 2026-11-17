@@ -1,5 +1,5 @@
 # SubSync installation
-You could download release builds from the [releases page](https://github.com/Z0rdic/subsync-whisper/releases).
+You could download release builds from the [releases page](https://github.com/Z0rdic/SubSync-Echo/releases).
 
 ## Prerequisites
 - C++11 compatible compiler (or better C++14);
