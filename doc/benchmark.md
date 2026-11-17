@@ -39,7 +39,7 @@ The results in the README come from the tests described here. They measure one t
 | Short film | Tears of Steel (Blender Foundation, CC-BY), official subtitles in 6 languages | **Yes**: `tests/e2e/tears_of_steel.py` |
 | Full-length film with songs | Sita Sings the Blues (public domain), community subtitles in 5 languages, song lines scored separately | **Yes**: `tests/e2e/sita_sings_the_blues.py` |
 
-The two reproducible tests download the film and subtitles themselves and run on both release packages (Windows and Linux) before every release; a release is published only when they pass. See [Building from source](../README.md#building-from-source) for the commands.
+The two reproducible tests download the film and subtitles themselves and run on both release packages (Windows and Linux) before every release; a release is published only when they pass. See [Building, testing and releasing](development.md) for the commands.
 
 ## Rules for changes to the sync
 
