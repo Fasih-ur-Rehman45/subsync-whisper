@@ -1,0 +1,61 @@
+# Exact versions of every Python package the release builds install.
+# The CI build jobs pass this file to pip with -c, so a new release of any
+# package (or of a package it depends on) can't change a build unnoticed.
+#
+# Taken from the last green build (2026-11-17, commit 52fdaac, Python 3.12).
+# To update: change a version here, push, and run the full CI with the e2e
+# tests (manual run of build.yml) before tagging a release.
+
+# installer tools
+pip==26.3
+setuptools==84.2.1
+wheel==0.48.0
+
+# the app (requirements.txt and the build command)
+certifi==2026.10.23
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.12
+pysubs2==1.9.1
+PyYAML==6.0.3
+pybind11==3.1.0
+requests==2.34.2
+charset_normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0
+# PyPI has Windows wheels; Linux uses the Ubuntu 22.04 wheel from extras.wxpython.org,
+# whose newest is 4.2.5
+wxPython==4.3.2; sys_platform == "win32"
+wxPython==4.2.5; sys_platform == "linux"
+
+# speech recognition and translation
+faster-whisper==1.2.1
+ctranslate2==4.9.0
+av==19.0.2
+onnxruntime==1.32.0
+numpy==2.5.5
+tokenizers==0.23.3
+sentencepiece==0.2.3
+huggingface-hub==2.4.0
+hf-xet==1.8.0
+filelock==4.2.11
+fsspec==2026.9.0
+tqdm==4.70.1
+click==8.5.1
+colorama==0.4.6
+httpx2==2.16.2
+httpcore2==2.16.2
+h11==0.16.0
+anyio==4.16.0
+truststore==0.10.5
+typing-extensions==4.16.0
+protobuf==7.36.2
+flatbuffers==25.12.19
+packaging==26.3
+
+# packaging the app
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.10
+altgraph==0.17.5
+pefile==2024.8.26
+pywin32-ctypes==0.2.3

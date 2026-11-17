@@ -22,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 ### Changed
 - **The project is now called SubSync Echo** (README, release pages), to tell it apart from the original SubSync. Its README and release pages now open with what it does for every language, not only Japanese. The app and its files keep the name `subsync`, and the repository moved and was renamed to [Z0rdic/SubSync-Echo](https://github.com/Z0rdic/SubSync-Echo) (links to the old addresses, including subsync-whisper, redirect).
+- **Builds use exact package versions.** The release builds installed the newest wxPython, PyInstaller, NumPy, ONNX Runtime, PyAV, CTranslate2 and their dependencies at build time, so a new release of any of them could change a download without any change here. `.github/constraints.txt` now pins all 43 packages to the versions of the last tested build (Windows and Linux resolve to exactly these versions; wxPython is 4.3.2 on Windows and 4.2.5 on Linux, the newest ready-made one for Ubuntu 22.04). The app itself is unchanged.
 
 ### Added
 - **How the accuracy tests are done:** `doc/benchmark.md` describes the answer keys, the timing errors applied, how lines are scored, the timing-style rule, which test sets anyone can rerun and the machines used.
