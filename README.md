@@ -4,7 +4,7 @@ SubSync fixes subtitles that are out of sync with a video. It listens to the vid
 
 This version adds **Japanese audio** and many more languages. The original SubSync has no speech model for Japanese, so anime and other Japanese films couldn't be synchronized. Here, speech is recognized with the Whisper speech recognition model and translated to English, so **English subtitles can be synchronized to Japanese films**. From version 0.20, **subtitles in other languages** work too (any language SubSync lists), including foreign subtitles for English films. Everything runs on your own computer, without a graphics card.
 
-**[⬇ Download the latest version](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/latest)** · [What's changed](CHANGELOG.md)
+**[⬇ Download the latest version](https://github.com/Z0rdic/subsync-whisper/releases/latest)** · [What's changed](CHANGELOG.md)
 
 ---
 
@@ -17,7 +17,7 @@ This version adds **Japanese audio** and many more languages. The original SubSy
 
 ## Installing
 
-1. Download **`subsync-<version>-portable-amd64.exe`** from **[Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/latest)**.
+1. Download **`subsync-<version>-portable-amd64.exe`** from **[Releases](https://github.com/Z0rdic/subsync-whisper/releases/latest)**.
 2. Run it and choose where to unpack, for example `Downloads`. It creates a `subsync` folder.
 3. Open that folder and run **`subsync.exe`**.
 
@@ -150,7 +150,7 @@ Speech recognition and translation run on your computer. Your videos and subtitl
 - All other languages work as in the original SubSync, without the Whisper fallback English has.
 - English subtitles on an English film take longer when the original method can't sync them: it listens to the whole film first, then Whisper takes over and adds the usual Whisper time. The command line downloads the speech model for this the first time (unless run with `--offline`); in the app window, the fallback is used only when the model is already downloaded, for example after syncing a film in another language.
 - In videos under 30 minutes, subtitles with a speed difference that isn't a frame-rate conversion aren't synced (no file is saved).
-- Automatic updates are turned off. New versions appear on the [Releases](https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases) page.
+- Automatic updates are turned off. New versions appear on the [Releases](https://github.com/Z0rdic/subsync-whisper/releases) page.
 
 ## Advanced settings
 
@@ -166,7 +166,7 @@ Smaller models aren't faster here. `tiny` (75 MB) failed to sync all 4 films it 
   3. Repeat the sync. The log is written to `log.txt`.
 
   On the command line, add the same two options to `subsync-cmd.exe`.
-- **To report a problem,** use the [bug report form](https://github.com/Fasih-ur-Rehman45/subsync-whisper/issues/new?template=bug_report.yml) and include the log.
+- **To report a problem,** use the [bug report form](https://github.com/Z0rdic/subsync-whisper/issues/new?template=bug_report.yml) and include the log.
 
 ## Command line
 

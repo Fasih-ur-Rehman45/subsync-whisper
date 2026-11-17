@@ -87,7 +87,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 Last release of the original [SubSync](https://github.com/sc0ty/subsync/releases/tag/0.17) by Michał Szymaniak.
 
-[Unreleased]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/compare/0.19...HEAD
-[0.19]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/tag/0.19
-[0.18]: https://github.com/Fasih-ur-Rehman45/subsync-whisper/releases/tag/0.18
+[Unreleased]: https://github.com/Z0rdic/subsync-whisper/compare/0.20...HEAD
+[0.20]: https://github.com/Z0rdic/subsync-whisper/releases/tag/0.20
+[0.19]: https://github.com/Z0rdic/subsync-whisper/releases/tag/0.19
+[0.18]: https://github.com/Z0rdic/subsync-whisper/releases/tag/0.18
 [0.17]: https://github.com/sc0ty/subsync/releases/tag/0.17
