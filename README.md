@@ -1,8 +1,10 @@
-# SubSync with Japanese audio support
+# SubSync Echo
 
-SubSync fixes subtitles that are out of sync with a video. It listens to the video's audio and moves the subtitles to where the lines are actually spoken.
+**Sync subtitles to a video's audio, in almost any language.** SubSync Echo listens to what is said in the video and moves every subtitle line to where it's spoken. It fixes subtitles that are a few seconds off, that drift because they were made for another frame rate, or that were made for a different cut of the film.
 
-This version adds **Japanese audio** and many more languages. The original SubSync has no speech model for Japanese, so anime and other Japanese films couldn't be synchronized. Here, speech is recognized with the Whisper speech recognition model and translated to English, so **English subtitles can be synchronized to Japanese films**. From version 0.20, **subtitles in other languages** work too (any language SubSync lists), including foreign subtitles for English films. Everything runs on your own computer, without a graphics card.
+It continues the original [SubSync](https://github.com/sc0ty/subsync), which is no longer maintained, and adds the Whisper speech recognition model. That makes it work where the original couldn't: **anime and other Japanese films**, and **subtitles in a different language from the audio**, such as English subtitles on a Japanese film or Spanish subtitles on an English one. It's tested with subtitles in English, Japanese, Spanish, German, Italian, Dutch, Russian, Chinese, Czech, Polish, Portuguese and Bulgarian, on Japanese and English films. Everything runs on your own computer, without a graphics card, and nothing is uploaded.
+
+The app and its files keep the name `subsync`.
 
 **[⬇ Download the latest version](https://github.com/Z0rdic/subsync-whisper/releases/latest)** · [What's changed](CHANGELOG.md)
 

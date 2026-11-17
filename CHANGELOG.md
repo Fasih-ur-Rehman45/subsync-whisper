@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this version of SubSync are listed here, newest first. Version numbers continue from the original SubSync (last release 0.17).
+All notable changes to SubSync Echo are listed here, newest first. Version numbers continue from the original SubSync (last release 0.17).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add every change under **Unreleased**. When releasing, rename that section to the new version and date. The release page takes its "What's new" from that section.
 
@@ -19,6 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - Downloaded asset archives (the original method's speech models and dictionaries) are refused as a whole when any file in them would be written outside the asset folder. These archives were already signature-checked, and Python's zip extraction already drops `..` from paths; this is a second safeguard.
 - `SECURITY.md` says how to report a security problem privately, which versions get fixes, and how each download is checked.
 - Release pages list a `SHA256SUMS` file with the checksum of every download.
+
+### Changed
+- **The project is now called SubSync Echo** (README, release pages), to tell it apart from the original SubSync. Its README and release pages now open with what it does for every language, not only Japanese. The app and its files keep the name `subsync`, and the repository moved to [Z0rdic/subsync-whisper](https://github.com/Z0rdic/subsync-whisper) (old links redirect).
 
 ### Added
 - **How the accuracy tests are done:** `doc/benchmark.md` describes the answer keys, the timing errors applied, how lines are scored, the timing-style rule, which test sets anyone can rerun and the machines used.

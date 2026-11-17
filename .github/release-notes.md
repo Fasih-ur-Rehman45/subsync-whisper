@@ -1,7 +1,7 @@
 <!-- Release page template. The release workflow replaces {{VERSION}} with the
      version and {{CHANGES}} with that version's section of CHANGELOG.md.
      Keep it a short overview: the full guide is README.md. -->
-SubSync synchronizes subtitles to a video's audio. This version adds **Japanese audio** and many more languages with the Whisper speech recognition model, so English subtitles can be synchronized to Japanese films, and subtitles in other languages to films in Japanese or English.
+**SubSync Echo** syncs subtitles to a video's audio, in almost any language. It listens to what is said and moves every line to where it's spoken, using the Whisper speech recognition model. It works for Japanese and English films, and for subtitles in the same language as the audio or a different one (such as English subtitles on a Japanese film, or Spanish subtitles on an English one). It's a continuation of the original SubSync, and everything runs on your own computer.
 
 ## What's new
 
