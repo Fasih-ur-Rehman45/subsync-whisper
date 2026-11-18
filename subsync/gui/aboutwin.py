@@ -32,7 +32,7 @@ class AboutWin(subsync.gui.layout.aboutwin.AboutWin):
         dlg.ShowModal()
 
     def onButtonWebsiteClick(self, event):
-        wx.LaunchDefaultBrowser('https://github.com/Z0rdic/SubSync-Echo')
+        wx.LaunchDefaultBrowser('https://github.com/resonaut/SubSync-Echo')
 
 
 credits='''SubSync - Copyright (c) Michal Szymaniak - GPLv3 - https://github.com/sc0ty/subsync

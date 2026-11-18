@@ -1,7 +1,7 @@
 # SubSync Echo
 
-[![Build](https://img.shields.io/github/actions/workflow/status/Z0rdic/SubSync-Echo/build.yml?branch=master&label=build)](https://github.com/Z0rdic/SubSync-Echo/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/Z0rdic/SubSync-Echo?label=release)](https://github.com/Z0rdic/SubSync-Echo/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/resonaut/SubSync-Echo/build.yml?branch=master&label=build)](https://github.com/resonaut/SubSync-Echo/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/resonaut/SubSync-Echo?label=release)](https://github.com/resonaut/SubSync-Echo/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 ![Platforms: Windows and Linux](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-0078D6)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
@@ -14,11 +14,11 @@
 
 <p align="center"><sub>English subtitles of <a href="https://mango.blender.org">Tears of Steel</a>, mistimed (before) and synced by SubSync Echo (after, the app's own output in its end-to-end test). Blue marks where SubSync's speech detector hears speech; the bars show when each file shows its lines. Before, "Robot's memory synced and locked!" appears 4.6 seconds early, while no one is speaking.</sub></p>
 
-<p align="center"><b><a href="https://github.com/Z0rdic/SubSync-Echo/releases/latest">⬇ Download for Windows or Linux</a></b> · <a href="CHANGELOG.md">What's new</a> · <a href="#questions">Questions</a></p>
+<p align="center"><b><a href="https://github.com/resonaut/SubSync-Echo/releases/latest">⬇ Download for Windows or Linux</a></b> · <a href="CHANGELOG.md">What's new</a> · <a href="#questions">Questions</a></p>
 
 ## Quick start
 
-1. **Download** `subsync-<version>-portable-amd64.exe` from [Releases](https://github.com/Z0rdic/SubSync-Echo/releases/latest), run it to unpack, and open **`subsync.exe`** in the new `subsync` folder. (Linux: see [Installing](#installing).)
+1. **Download** `subsync-<version>-portable-amd64.exe` from [Releases](https://github.com/resonaut/SubSync-Echo/releases/latest), run it to unpack, and open **`subsync.exe`** in the new `subsync` folder. (Linux: see [Installing](#installing).)
 2. **Choose your subtitles and your video,** set the language of the subtitles, and click **Start**.
 3. When it says **Subtitles synchronized**, click **Save**.
 
@@ -57,7 +57,7 @@ It keeps your subtitle text and styling exactly as they were and changes only th
 - Internet once, the first time a model is needed, to download it.
 
 **Windows**
-1. Download **`subsync-<version>-portable-amd64.exe`** from **[Releases](https://github.com/Z0rdic/SubSync-Echo/releases/latest)**.
+1. Download **`subsync-<version>-portable-amd64.exe`** from **[Releases](https://github.com/resonaut/SubSync-Echo/releases/latest)**.
 2. Run it and choose where to unpack, for example `Downloads`. It creates a `subsync` folder.
 3. Open that folder and run **`subsync.exe`**.
 
@@ -157,7 +157,7 @@ Japanese and English audio are tested, with subtitles in English, Japanese, Span
 - Check that the subtitles are for this film and, if you can, for this release of it.
 - Check the subtitle language you chose. If you set the video's language by hand, check that too.
 - Films with very little dialogue give less to go on; another subtitle file may work better.
-- If it still fails, [report it](https://github.com/Z0rdic/SubSync-Echo/issues/new?template=bug_report.yml) with a log (see [Troubleshooting](#troubleshooting)).
+- If it still fails, [report it](https://github.com/resonaut/SubSync-Echo/issues/new?template=bug_report.yml) with a log (see [Troubleshooting](#troubleshooting)).
 
 </details>
 
@@ -209,7 +209,7 @@ Speech recognition and translation run on your computer. Your videos and subtitl
 - All other languages work as in the original SubSync, without the Whisper fallback English has.
 - English subtitles on an English film take longer when the original method can't sync them: it listens to the whole film first, then Whisper takes over and adds the usual Whisper time. The command line downloads the speech model for this the first time (unless run with `--offline`); in the app window, the fallback is used only when the model is already downloaded, for example after syncing a film in another language.
 - In videos under 30 minutes, subtitles with a speed difference that isn't a frame-rate conversion aren't synced (no file is saved).
-- Automatic updates are turned off. New versions appear on the [Releases](https://github.com/Z0rdic/SubSync-Echo/releases) page.
+- Automatic updates are turned off. New versions appear on the [Releases](https://github.com/resonaut/SubSync-Echo/releases) page.
 
 ## Troubleshooting
 
@@ -219,7 +219,7 @@ Speech recognition and translation run on your computer. Your videos and subtitl
   3. Repeat the sync. The log is written to `log.txt`.
 
   On the command line, add the same two options to `subsync-cmd.exe`.
-- **To report a problem,** use the [bug report form](https://github.com/Z0rdic/SubSync-Echo/issues/new?template=bug_report.yml) and include the log.
+- **To report a problem,** use the [bug report form](https://github.com/resonaut/SubSync-Echo/issues/new?template=bug_report.yml) and include the log.
 
 ## For advanced users
 

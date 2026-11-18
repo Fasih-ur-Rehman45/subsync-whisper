@@ -21,7 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 - Release pages list a `SHA256SUMS` file with the checksum of every download.
 
 ### Changed
-- **The project is now called SubSync Echo** (README, release pages), to tell it apart from the original SubSync. Its README and release pages now open with what it does for every language, not only Japanese. The app and its files keep the name `subsync`, and the repository moved and was renamed to [Z0rdic/SubSync-Echo](https://github.com/Z0rdic/SubSync-Echo) (links to the old addresses, including subsync-whisper, redirect).
+- **The project is now called SubSync Echo** (README, release pages), to tell it apart from the original SubSync. Its README and release pages now open with what it does for every language, not only Japanese. The app and its files keep the name `subsync`, and the repository moved to [resonaut/SubSync-Echo](https://github.com/resonaut/SubSync-Echo) (links to the old addresses, Z0rdic/SubSync-Echo and subsync-whisper, redirect).
 - **The README is written for everyday users first:** what it does, the before/after clip, a 3-step quick start, "Is this for me?" (what it fixes and what it can't do), installing, using it, a short summary of the test results, and answers to common questions (privacy, files and languages it works with, what to try when it can't sync, where it keeps its files). The full test tables, the language table and how it works moved to [doc/results.md](doc/results.md); building, testing and releasing to [doc/development.md](doc/development.md).
 - **Builds use exact package versions.** The release builds installed the newest wxPython, PyInstaller, NumPy, ONNX Runtime, PyAV, CTranslate2 and their dependencies at build time, so a new release of any of them could change a download without any change here. `.github/constraints.txt` now pins all 43 packages to the versions of the last tested build (Windows and Linux resolve to exactly these versions; wxPython is 4.3.2 on Windows and 4.2.5 on Linux, the newest ready-made one for Ubuntu 22.04). The app itself is unchanged.
 
@@ -93,8 +93,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Add
 
 Last release of the original [SubSync](https://github.com/sc0ty/subsync/releases/tag/0.17) by Michał Szymaniak.
 
-[Unreleased]: https://github.com/Z0rdic/SubSync-Echo/compare/0.20...HEAD
-[0.20]: https://github.com/Z0rdic/SubSync-Echo/releases/tag/0.20
-[0.19]: https://github.com/Z0rdic/SubSync-Echo/releases/tag/0.19
-[0.18]: https://github.com/Z0rdic/SubSync-Echo/releases/tag/0.18
+[Unreleased]: https://github.com/resonaut/SubSync-Echo/compare/0.20...HEAD
+[0.20]: https://github.com/resonaut/SubSync-Echo/releases/tag/0.20
+[0.19]: https://github.com/resonaut/SubSync-Echo/releases/tag/0.19
+[0.18]: https://github.com/resonaut/SubSync-Echo/releases/tag/0.18
 [0.17]: https://github.com/sc0ty/subsync/releases/tag/0.17
