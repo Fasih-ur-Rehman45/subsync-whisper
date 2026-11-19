@@ -5,6 +5,16 @@ on:
     branches: [ master ]
     # version tags (e.g. 0.18) also publish a release
     tags: [ '[0-9]*' ]
+    # pushes that change only these don't build: none of them goes into the
+    # packages or the tests. GitHub doesn't apply this to tags, so a release
+    # always builds; a push mixing these with other files builds as usual.
+    paths-ignore:
+      - '**.md'                     # README, CHANGELOG, SECURITY, doc/, release notes
+      - 'doc/**'                    # README images
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'web/**'                    # the original SubSync's browser version, not built here
+      - 'snap/**'                   # snap packaging, not built here
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:
