@@ -91,11 +91,18 @@ def download(data, langs):
             print('downloading', url, flush=True)
             req = urllib.request.Request(url, headers={ 'User-Agent': 'subsync-e2e-test' })
             with urllib.request.urlopen(req) as src, open(path + '.part', 'wb') as dst:
+                total, done = int(src.headers.get('Content-Length') or 0), 0
                 while True:
                     chunk = src.read(1 << 20)
                     if not chunk:
                         break
                     dst.write(chunk)
+                    done += len(chunk)
+            # a dropped connection can end the download early without an error
+            if total and done != total:
+                os.remove(path + '.part')
+                raise IOError('download of {} cut off: {} of {} bytes, please run again'.format(
+                    name, done, total))
             os.replace(path + '.part', path)
 
 
@@ -145,7 +152,12 @@ def main():
         download(args.data, langs)
     os.makedirs(args.work, exist_ok=True)
     video = os.path.abspath(os.path.join(args.data, VIDEO))
-    app = [ os.path.abspath(x) if os.path.exists(x) else x for x in args.app.split() ]
+    # a path to the app (even with spaces) is used whole, made absolute for
+    # Windows; otherwise a command such as "python run.py" is split
+    if os.path.exists(args.app):
+        app = [ os.path.abspath(args.app) ]
+    else:
+        app = [ os.path.abspath(x) if os.path.exists(x) else x for x in args.app.split() ]
     rows, failed, speechShare = [], False, None
 
     for lang in langs:

@@ -41,3 +41,4 @@ CppCheckResults.xml
 /.whisper
 # test material: subtitles and transcripts of local movies, not for publishing
 /test-data
+/e2e-data

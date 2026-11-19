@@ -90,7 +90,7 @@ jobs:
       # timing logic on synthetic films, and the matching method per language
       # pair (needs the engine built above)
       - name: Unit tests
-        run: python -m unittest discover -s tests -v
+        run: python tests/run_all.py -v
 
       - name: Smoke test
         run: |
@@ -218,7 +218,7 @@ jobs:
           ls -l gizmo*.so
 
       - name: Unit tests
-        run: python -m unittest discover -s tests -v
+        run: python tests/run_all.py -v
 
       - name: Smoke test
         run: |
@@ -292,45 +292,36 @@ jobs:
           name: subsync-windows-x64
           path: app
 
-      # the film (372 MB) and the speech and translation models (980 MB)
+      # Tears of Steel (372 MB) and the speech and translation models (980 MB)
       - uses: actions/cache@v4
         with:
           path: |
-            tos
+            e2e-data/tears-of-steel
             ~/.cache/huggingface
-          key: e2e-tears-of-steel-${{ runner.os }}-v1
-
-      - name: Tears of Steel
-        shell: bash
-        run: python tests/e2e/tears_of_steel.py --app app/subsync-cmd.exe --data tos --work e2e-work --download
+          key: e2e-tears-of-steel-${{ runner.os }}-v2
 
       # full-length, music-heavy film (481 MB and its subtitles)
       - uses: actions/cache@v4
-        if: success() || failure()
         with:
-          path: sita
-          key: e2e-sita-${{ runner.os }}-v1
+          path: e2e-data/sita
+          key: e2e-sita-${{ runner.os }}-v2
 
-      - name: Sita Sings the Blues
-        if: success() || failure()
+      # the same command anyone can run (doc/development.md); both films are
+      # tested even when the first fails
+      - name: End-to-end tests
         shell: bash
-        run: python tests/e2e/sita_sings_the_blues.py --app app/subsync-cmd.exe --data sita --work e2e-sita --download
+        run: python tests/run_all.py e2e --app app/subsync-cmd.exe
 
-      # Whisper's output differs a little between machines: on failure, keep
-      # the transcripts to see which lines decided it
-      - name: Collect transcripts
-        if: failure()
-        shell: bash
-        run: python -c "import os, shutil, tempfile; src = os.path.join(tempfile.gettempdir(), 'subsync-transcripts'); os.path.isdir(src) and shutil.copytree(src, 'e2e-transcripts')"
-
+      # Whisper's output differs a little between machines: keep the
+      # transcripts to see which lines decided a result
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-windows
           path: |
-            e2e-work
-            e2e-sita/*.log
-            e2e-transcripts
+            e2e-data/work/tears-of-steel
+            e2e-data/work/sita/*.log
+            e2e-data/temp/*/subsync-transcripts
 
   e2e-linux:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -357,36 +348,28 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
-            tos
+            e2e-data/tears-of-steel
             ~/.cache/huggingface
-          key: e2e-tears-of-steel-${{ runner.os }}-v1
-
-      - name: Tears of Steel
-        run: python tests/e2e/tears_of_steel.py --app app/subsync/subsync-cmd --data tos --work e2e-work --download
+          key: e2e-tears-of-steel-${{ runner.os }}-v2
 
       # full-length, music-heavy film (481 MB and its subtitles)
       - uses: actions/cache@v4
-        if: success() || failure()
         with:
-          path: sita
-          key: e2e-sita-${{ runner.os }}-v1
+          path: e2e-data/sita
+          key: e2e-sita-${{ runner.os }}-v2
 
-      - name: Sita Sings the Blues
-        if: success() || failure()
-        run: python tests/e2e/sita_sings_the_blues.py --app app/subsync/subsync-cmd --data sita --work e2e-sita --download
-
-      - name: Collect transcripts
-        if: failure()
-        run: python -c "import os, shutil, tempfile; src = os.path.join(tempfile.gettempdir(), 'subsync-transcripts'); os.path.isdir(src) and shutil.copytree(src, 'e2e-transcripts')"
+      # the same command anyone can run (doc/development.md)
+      - name: End-to-end tests
+        run: python tests/run_all.py e2e --app app/subsync/subsync-cmd
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-linux
           path: |
-            e2e-work
-            e2e-sita/*.log
-            e2e-transcripts
+            e2e-data/work/tears-of-steel
+            e2e-data/work/sita/*.log
+            e2e-data/temp/*/subsync-transcripts
 
   release:
     # version tags publish both builds on one release page, after both pass

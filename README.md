@@ -105,7 +105,7 @@ Every number here comes from a real test run: correct subtitles were deliberatel
 - When it can't confirm the timing, it **saves nothing** rather than saving wrong subtitles.
 - **Time,** on a laptop with no graphics card (AMD Ryzen 9 5900HX, 8 GB of RAM): 1.5–2.5 minutes for most films the first time, seconds when syncing the same film again. Subtitles that aren't in English add 1–2.5 minutes the first time, for translating them.
 
-The full tables, which languages work how and how it works inside are in [doc/results.md](doc/results.md); the test method is in [doc/benchmark.md](doc/benchmark.md). Two of the tests download free films and run before every release, so anyone can repeat them.
+The full tables, which languages work how and how it works inside are in [doc/results.md](doc/results.md); the test method is in [doc/benchmark.md](doc/benchmark.md). Two of the tests use free films and run before every release; [you can run them yourself](doc/development.md#check-the-results-yourself) with one command.
 
 ## Questions
 
