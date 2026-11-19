@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>SubSync Echo (16-32 px)</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b2647"/>
+      <stop offset="1" stop-color="#0f1528"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5EE6CF"/>
+      <stop offset="0.5" stop-color="#7CC6FF"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <path d="M112 92 H316 a64 64 0 0 1 64 64 V290 a64 64 0 0 1 -64 64 H208 L124 432 L134 354 H112 a64 64 0 0 1 -64 -64 V156 a64 64 0 0 1 64 -64 Z"
+        fill="#1f2c52" stroke="url(#wave)" stroke-width="44" stroke-linejoin="round"/>
+  <rect x="112" y="172" width="204" height="52" rx="26" fill="#EAFBF8"/>
+  <rect x="112" y="252" width="132" height="52" rx="26" fill="#EAFBF8" opacity="0.8"/>
+  <path d="M432 168 a110 110 0 0 1 0 172" fill="none" stroke="#A78BFA" stroke-width="40" stroke-linecap="round"/>
+</svg>

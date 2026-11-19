@@ -1,4 +1,28 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Generator: Adobe Illustrator 18.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg enable-background="new 0 0 58 58" version="1.1" viewBox="0 0 58 58" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><metadata><rdf:RDF><cc:Work rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/><dc:title/></cc:Work></rdf:RDF></metadata>
-<g><path d="m0.087123 9.1513v27.949c0 3.5998 2.6646 6.5175 5.951 6.5175h25.44l12.074 14.542v-14.542h8.5372c3.2864 0 5.951-2.9177 5.951-6.5162v-27.949c0-3.5998-2.6646-6.5175-5.951-6.5175h-46.05c-3.2876 0-5.9522 2.9177-5.9522 6.5162z" fill="#28abe3" stroke-width="1.2634"/></g><g fill="#e8b71a"><ellipse cx="44.748" cy="23.141" rx="3.2367" ry="3.0629" stroke-width="1.3546"/><ellipse cx="24.787" cy="23.141" rx="3.2367" ry="3.0629" stroke-width="1.3546"/><path d="m14.964 18.267h-4.6521c-0.6495 0-1.176 0.54014-1.176 1.2064v7.3354c0 0.66571 0.52653 1.2058 1.176 1.2058h4.6521c0.20961 0 0.4153 0.05734 0.5964 0.16628l7.4541 7.1193c0.78364 0.47305 1.7719-0.10666 1.7719-1.0396v-22.24c0-0.93291-0.98822-1.5126-1.7719-1.0396l-7.4541 7.1193c-0.1811 0.10894-0.38679 0.16628-0.5964 0.16628z" stroke-width=".56612"/><ellipse cx="34.768" cy="23.141" rx="3.2367" ry="3.0629" stroke-width="1.3546"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>SubSync Echo</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18223f"/>
+      <stop offset="1" stop-color="#0d1222"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.46" cy="0.45" r="0.6">
+      <stop offset="0" stop-color="#2a4a66" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#2a4a66" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5EE6CF"/>
+      <stop offset="0.5" stop-color="#7CC6FF"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <g transform="translate(-20 0)">
+    <path d="M140 118 H310 a58 58 0 0 1 58 58 V292 a58 58 0 0 1 -58 58 H206 L142 404 L150 350 H140 a58 58 0 0 1 -58 -58 V176 a58 58 0 0 1 58 -58 Z"
+          fill="#1b2747" stroke="url(#wave)" stroke-width="26" stroke-linejoin="round"/>
+    <rect x="132" y="196" width="186" height="34" rx="17" fill="#EAFBF8"/>
+    <rect x="132" y="252" width="128" height="34" rx="17" fill="#EAFBF8" opacity="0.75"/>
+    <path d="M400 186 a92 92 0 0 1 0 140" fill="none" stroke="#7CC6FF" stroke-width="22" stroke-linecap="round"/>
+    <path d="M436 150 a150 150 0 0 1 0 212" fill="none" stroke="#A78BFA" stroke-width="22" stroke-linecap="round" opacity="0.8"/>
+  </g>
+</svg>

@@ -27,3 +27,7 @@ To release a version:
 2. Push a version tag such as `0.21`.
 
 The tag builds the package and publishes a release. Its "What's new" comes from that changelog section. A tag without a changelog entry stops before building.
+
+## The icon
+
+The app's icon is drawn in two SVG files: [resources/subsync.svg](../resources/subsync.svg), the full design, used from 64 px, and [resources/subsync-small.svg](../resources/subsync-small.svg), a bolder version for 16–48 px, where fine lines blur. The Windows `.ico`, the macOS `.icns` and the app's PNG images (`subsync/img/icon.png` from the small drawing, `logo.png` from the full one) are made from them.
