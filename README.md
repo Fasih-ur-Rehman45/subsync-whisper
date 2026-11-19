@@ -1,4 +1,4 @@
-# SubSync Echo
+# <img src="resources/subsync.svg" width="44" height="44" alt="" align="top"> SubSync Echo
 
 [![Build](https://img.shields.io/github/actions/workflow/status/resonaut/SubSync-Echo/build.yml?branch=master&label=build)](https://github.com/resonaut/SubSync-Echo/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/resonaut/SubSync-Echo?label=release)](https://github.com/resonaut/SubSync-Echo/releases/latest)
